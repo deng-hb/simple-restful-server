@@ -41,6 +41,12 @@ public class TestApp {
 
         System.out.println(res);
     }
+    @Test
+    public void testHeader() {
+        String res = HttpUtils.get(HOST + "/test/header");
+
+        System.out.println(res);
+    }
 
     @Test
     public void pullUsers() {

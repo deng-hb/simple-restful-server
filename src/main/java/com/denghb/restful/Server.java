@@ -1,26 +1,29 @@
 package com.denghb.restful;
 
+import com.denghb.restful.utils.JSONUtils;
 import com.denghb.restful.utils.LogUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 
 public class Server {
-    private static final String RESPONSE_HTML = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n%s";
 
     private static int DEFAULT_PORT = 8888;
 
     public interface Handler {
-        String execute(String request);
+        Response execute(Request request);
     }
 
     private Handler handler;
@@ -105,24 +108,24 @@ public class Server {
                 } else if (key.isReadable()) {
                     //该key有Read事件
                     SocketChannel socketChannel = (SocketChannel) key.channel();
-                    String requestHeader = "";
+                    String message = "";
                     //拿出通道中的Http头请求
                     try {
-                        requestHeader = receive(socketChannel);
+                        message = receive(socketChannel);
                     } catch (Exception e) {
                         e.printStackTrace();
                         return;
                     }
                     //启动线程处理该请求,if条件判断一下，防止心跳包
-                    if (!"".equals(requestHeader)) {
-                        String response = "";
+                    if (!"".equals(message)) {
+                        Response response = new Response();
                         if (null != handler) {
-                            response = handler.execute(requestHeader);
+                            response = handler.execute(new Request(message));
                         }
 
                         socketChannel.register(selector, SelectionKey.OP_WRITE);
                         ByteBuffer buffer = ByteBuffer.allocate(1024);
-                        buffer.put(String.format(RESPONSE_HTML, response).getBytes());
+                        buffer.put(response.bytes());
                         //从写模式，切换到读模式
                         buffer.flip();
                         socketChannel.write(buffer);
@@ -166,5 +169,164 @@ public class Server {
         bytes = baos.toByteArray();
         baos.close();
         return new String(bytes);
+    }
+
+    // 这真不是servlet
+    class Request {
+
+        private String method;
+
+        private String uri;
+
+        private Map<String, String> parameters;
+
+        private Map<String, String> headers;
+
+        /**
+         * 解析报文，待优化
+         *
+         * @param message
+         */
+        public Request(String message) {
+
+            // GET /xxx?a=aa HTTP/1.1
+            int firstStart = message.indexOf(" ");
+            this.method = message.substring(0, firstStart);
+            String uri = message.substring(firstStart + 1, message.indexOf(" ", message.indexOf(" ") + 1));
+            //有问号表示后面跟有参数
+            int start = uri.indexOf("?");
+            if (-1 != start) {
+                String attr = uri.substring(start + 1, uri.length());
+                uri = uri.substring(0, start);
+
+                buildParameter(this.parameters, attr);
+            }
+            this.uri = uri;
+
+            String headerStr = message.substring(message.indexOf("\r\n") + 2, message.indexOf("\r\n\r\n"));
+
+            this.headers = new HashMap<String, String>();
+            for (String header : headerStr.split("\r\n")) {
+                String[] heads = header.split(": ");
+                if (heads.length != 2) {
+                    continue;
+                }
+                String key = heads[0];
+                String value = heads[1];
+                this.headers.put(key, value.trim());
+            }
+
+            // 请求参数
+            String p = message.substring(message.indexOf("\r\n\r\n") + 4, message.length());
+            buildParameter(this.parameters, p);
+        }
+
+        public String getMethod() {
+            return method;
+        }
+
+        public void setMethod(String method) {
+            this.method = method;
+        }
+
+        public String getUri() {
+            return uri;
+        }
+
+        public void setUri(String uri) {
+            this.uri = uri;
+        }
+
+        public Map<String, String> getParameters() {
+            return parameters;
+        }
+
+        public void setParameters(Map<String, String> parameters) {
+            this.parameters = parameters;
+        }
+
+        public Map<String, String> getHeaders() {
+            return headers;
+        }
+
+        public void setHeaders(Map<String, String> headers) {
+            this.headers = headers;
+        }
+    }
+
+    static class Response {
+
+        // 先默认都返回成功
+        private static final String RESPONSE_HTML = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n%s";
+        private int code = 200;// TODO
+
+        private Object body;
+
+        private Response() {
+
+        }
+
+        private Response(Object body) {
+            this.body = body;
+        }
+
+        /**
+         * 响应字节
+         *
+         * @return
+         */
+        public byte[] bytes() {
+            String result = "";
+            if (body instanceof String) {
+                result = String.valueOf(body);
+            } else {
+                result = JSONUtils.toJson(body);
+            }
+
+            result = String.format(RESPONSE_HTML, result);
+
+            return result.getBytes();
+        }
+
+        public static Response build(Object body) {
+            return new Response(body);
+        }
+
+        public static Response build(int code) {
+            code = code;
+            return new Response("");
+        }
+    }
+
+    private static void buildParameter(Map<String, String> param, String p) {
+        if (null == param) {
+            param = new HashMap<String, String>();
+        }
+
+        if ("".equals(p)) {
+            return;
+        }
+
+        // JSON ?
+        if (p.startsWith("{")) {
+            Map a = JSONUtils.fromJson(Map.class, p);
+
+            param.putAll(a);
+
+            return;
+        }
+
+        String[] attrs = p.split("&");
+        for (String string : attrs) {
+            String key = string.substring(0, string.indexOf("="));
+            String value = string.substring(string.indexOf("=") + 1);
+
+            try {
+                value = URLDecoder.decode(value, "utf-8");
+            } catch (Exception e) {
+
+            }
+            param.put(key, value);
+        }
     }
 }
