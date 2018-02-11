@@ -178,9 +178,9 @@ public class Server {
 
         private String uri;
 
-        private Map<String, String> parameters;
+        private Map<String, String> parameters = new HashMap<String, String>();;
 
-        private Map<String, String> headers;
+        private Map<String, String> headers = new HashMap<String, String>();;
 
         /**
          * 解析报文，待优化
@@ -205,7 +205,6 @@ public class Server {
 
             String headerStr = message.substring(message.indexOf("\r\n") + 2, message.indexOf("\r\n\r\n"));
 
-            this.headers = new HashMap<String, String>();
             for (String header : headerStr.split("\r\n")) {
                 String[] heads = header.split(": ");
                 if (heads.length != 2) {
@@ -299,10 +298,6 @@ public class Server {
     }
 
     private static void buildParameter(Map<String, String> param, String p) {
-        if (null == param) {
-            param = new HashMap<String, String>();
-        }
-
         if ("".equals(p)) {
             return;
         }
