@@ -1,6 +1,7 @@
 package com.denghb.demo.controller;
 
 import com.denghb.demo.MyException;
+import com.denghb.demo.model.JSONModel;
 import com.denghb.restful.annotation.Error;
 import com.denghb.restful.annotation.*;
 import com.denghb.restful.utils.LogUtils;
@@ -22,9 +23,9 @@ public class BaseController {
      * URL访问过滤
      */
     @Filter(value = "/user")
-    boolean filter2(@RequestHeader("Token") String token) {
+    JSONModel filter2(@RequestHeader("Token") String token) {
 
-        return false;
+        return null;// 放行
     }
 
     /**

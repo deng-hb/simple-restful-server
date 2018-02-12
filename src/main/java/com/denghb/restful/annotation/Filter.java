@@ -5,6 +5,8 @@ import java.lang.annotation.*;
 
 /**
  * 过滤器
+ * 返回null表示放行
+ *
  */
 @Target(value = {ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)

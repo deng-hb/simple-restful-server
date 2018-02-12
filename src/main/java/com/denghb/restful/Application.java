@@ -120,22 +120,30 @@ public class Application {
                     }
 
                 }
+                Object result = null;
 
                 try {
-                    // 执行方法
+                    // 执行path对应方法
                     Method method = info.getMethod();
                     method.setAccessible(true);
-                    Object result = method.invoke(target, ps);
+                    result = method.invoke(target, ps);
 
-                    return Server.Response.build(result);
+                    result = Server.Response.build(result);
                 } catch (InvocationTargetException e) {
                     // 调用方法抛出异常
-                    return handlerError(e.getTargetException());
+                    try {
+                        result = handlerError(e.getTargetException());
+                    } catch (Exception e1) {
+                        e1.printStackTrace();
+                    }
 
                 } catch (Exception e) {
                     LogUtils.error(getClass(), e.getMessage(), e);
                 }
-                return Server.Response.buildError(500);
+                if (null == request) {
+                    return Server.Response.buildError(500);
+                }
+                return Server.Response.build(result);
             }
         });
 
@@ -161,38 +169,34 @@ public class Application {
      *
      * @param e
      */
-    private static Server.Response handlerError(Throwable e) {
+    private static Object handlerError(Throwable e) throws Exception {
 
 
         String key = Error.class.getSimpleName() + e.getClass().getSimpleName();
         Application.MethodInfo info = _OBJECT_METHOD.get(key);
         if (null != info) {
-            try {
+            return null;
+        }
 
-                Object target = getObject(info.getClazz());
+        Object target = getObject(info.getClazz());
 
-                // 参数赋值
-                int pcount = info.parameters.size();
-                Object[] ps = new Object[pcount];
+        // 参数赋值
+        int pcount = info.parameters.size();
+        Object[] ps = new Object[pcount];
 
-                if (0 < pcount) {
+        if (0 < pcount) {
 
-                    for (int i = 0; i < pcount; i++) {
-                        Param param = info.parameters.get(i);
-                        if (param.getType() == e.getClass()) {
-                            ps[i] = e;
-                        }
-                    }
+            for (int i = 0; i < pcount; i++) {
+                Param param = info.parameters.get(i);
+                if (param.getType() == e.getClass()) {
+                    ps[i] = e;
                 }
-                Method method = info.getMethod();
-                method.setAccessible(true);
-                Object result = method.invoke(target, ps);
-                return Server.Response.build(result);
-            } catch (Exception e1) {
-                e1.printStackTrace();
             }
         }
-        return Server.Response.buildError(500);
+        Method method = info.getMethod();
+        method.setAccessible(true);
+        return method.invoke(target, ps);
+
     }
 
 
