@@ -1,11 +1,14 @@
 package com.denghb.restful;
 
+
 import com.denghb.restful.annotation.*;
+import com.denghb.restful.annotation.Error;
 import com.denghb.restful.utils.JSONUtils;
 import com.denghb.restful.utils.LogUtils;
 import com.denghb.restful.utils.ReflectUtils;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,8 +18,19 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class Application {
 
+    /**
+     * 所有创建的RESTful对象
+     */
     static Map<Class, Object> _OBJECT = new ConcurrentHashMap<Class, Object>();
 
+    /**
+     * 所有请求方法
+     * <p>
+     * <pre>
+     * @GET("/user") -> <"GET/user",MethodInfo>
+     * @Filter("/") -> <"Filter/",MethodInfo>
+     * </pre>
+     */
     static Map<String, Application.MethodInfo> _OBJECT_METHOD = new ConcurrentHashMap<String, Application.MethodInfo>();
 
     private Application() {
@@ -49,16 +63,11 @@ public class Application {
                     }
 
                     if (pathVar.isEmpty()) {
-                        return Server.Response.build("404");
+                        return Server.Response.buildError(404);
                     }
                 }
 
-                Class cc = info.getClazz();
-                Object target = _OBJECT.get(cc);
-                if (null == target) {
-                    target = ReflectUtils.createInstance(cc);
-                    _OBJECT.put(cc, target);
-                }
+                Object target = getObject(info.getClazz());
 
                 Map<String, String> requestParameters = request.getParameters();
                 // 参数赋值
@@ -86,7 +95,7 @@ public class Application {
                         }
 
                         if (null != value) {
-                            // 日期
+                            // TODO 日期格式
                             if (param.getType() == String.class) {
                                 ps[i] = value;
                             } else {
@@ -117,15 +126,73 @@ public class Application {
                     Method method = info.getMethod();
                     method.setAccessible(true);
                     Object result = method.invoke(target, ps);
+
                     return Server.Response.build(result);
+                } catch (InvocationTargetException e) {
+                    // 调用方法抛出异常
+                    return handlerError(e.getTargetException());
+
                 } catch (Exception e) {
                     LogUtils.error(getClass(), e.getMessage(), e);
                 }
-                return Server.Response.build("ERROR");
+                return Server.Response.buildError(500);
             }
         });
 
         server.start(args);
+    }
+
+    /**
+     * 获取类对象实例
+     */
+    private static Object getObject(Class clazz) {
+
+        Object target = _OBJECT.get(clazz);
+        if (null == target) {
+            target = ReflectUtils.createInstance(clazz);
+            if (null != target)
+                _OBJECT.put(clazz, target);
+        }
+        return target;
+    }
+
+    /**
+     * 将错误信息输出
+     *
+     * @param e
+     */
+    private static Server.Response handlerError(Throwable e) {
+
+
+        String key = Error.class.getSimpleName() + e.getClass().getSimpleName();
+        Application.MethodInfo info = _OBJECT_METHOD.get(key);
+        if (null != info) {
+            try {
+
+                Object target = getObject(info.getClazz());
+
+                // 参数赋值
+                int pcount = info.parameters.size();
+                Object[] ps = new Object[pcount];
+
+                if (0 < pcount) {
+
+                    for (int i = 0; i < pcount; i++) {
+                        Param param = info.parameters.get(i);
+                        if (param.getType() == e.getClass()) {
+                            ps[i] = e;
+                        }
+                    }
+                }
+                Method method = info.getMethod();
+                method.setAccessible(true);
+                Object result = method.invoke(target, ps);
+                return Server.Response.build(result);
+            } catch (Exception e1) {
+                e1.printStackTrace();
+            }
+        }
+        return Server.Response.buildError(500);
     }
 
 
@@ -144,23 +211,25 @@ public class Application {
                 GET get = method.getAnnotation(GET.class);
                 if (null != get) {
                     add(GET.class.getSimpleName(), get.value(), new MethodInfo(c, method));
-                    continue;
                 }
                 POST post = method.getAnnotation(POST.class);
                 if (null != post) {
                     add(POST.class.getSimpleName(), post.value(), new MethodInfo(c, method));
-                    continue;
                 }
 
                 DELETE delete = method.getAnnotation(DELETE.class);
                 if (null != delete) {
                     add(DELETE.class.getSimpleName(), delete.value(), new MethodInfo(c, method));
-                    continue;
                 }
 
-                ExceptionHandler handler = method.getAnnotation(ExceptionHandler.class);
-                if (null != handler) {
-                    _OBJECT_METHOD.put(handler.value(), new MethodInfo(c, method));
+                Error error = method.getAnnotation(Error.class);
+                if (null != error) {
+                    add(Error.class.getSimpleName(), error.throwable().getSimpleName(), new MethodInfo(c, method));
+                }
+
+                Filter filter = method.getAnnotation(Filter.class);
+                if (null != filter) {
+                    add(Filter.class.getSimpleName(), filter.value(), new MethodInfo(c, method));
                 }
             }
         }
@@ -184,7 +253,7 @@ public class Application {
      *              {id=234}
      */
     private static void buildPath(String path1, String path2, Map<String, String> pathVar) {
-        int start = path1.indexOf("{");
+        int start = path1.indexOf('{');
         if (-1 == start) {
             return;
         }
@@ -204,8 +273,8 @@ public class Application {
             String key = tmp1s[i];
             String value = tmp2s[i];
 
-            int start1 = key.indexOf("{");
-            int end1 = key.indexOf("}");
+            int start1 = key.indexOf('{');
+            int end1 = key.indexOf('}');
 
             if (0 != start1 || end1 != key.length() - 1) {
                 // 需要掐头去尾
@@ -221,8 +290,7 @@ public class Application {
                 // 去尾
                 if (end1 != key.length() - 1) {
                     String endKeyStr = key.substring(end1 + 1, key.length());
-                    String endValueStr = value.substring(value.indexOf(endKeyStr), value.length());
-                    if (!endKeyStr.equals(endValueStr)) {
+                    if (!value.endsWith(endKeyStr)) {
                         pathVar.clear();
                         return;// 不匹配
                     }

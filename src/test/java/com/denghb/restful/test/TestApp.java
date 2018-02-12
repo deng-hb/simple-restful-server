@@ -37,7 +37,19 @@ public class TestApp {
 
     @Test
     public void testXX3() {
-        String res = HttpUtils.get(HOST + "/xx/asdasdas/basdasdasd");
+        String res = HttpUtils.get(HOST + "/xx/asdasdas/basdasdasdaa");
+
+        System.out.println(res);
+    }
+    @Test
+    public void testError() {
+        String res = HttpUtils.get(HOST + "/error");
+
+        System.out.println(res);
+    }
+    @Test
+    public void testError2() {
+        String res = HttpUtils.get(HOST + "/error2");
 
         System.out.println(res);
     }

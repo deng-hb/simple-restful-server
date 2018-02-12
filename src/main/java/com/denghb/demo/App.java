@@ -1,8 +1,10 @@
 package com.denghb.demo;
 
 import com.denghb.restful.Application;
-import com.denghb.restful.annotation.*;
-import com.denghb.restful.utils.LogUtils;
+import com.denghb.restful.annotation.GET;
+import com.denghb.restful.annotation.PathVariable;
+import com.denghb.restful.annotation.RESTful;
+import com.denghb.restful.annotation.RequestHeader;
 
 /**
  * Hello world!
@@ -20,7 +22,7 @@ public class App {
         return "XX";
     }
 
-    @GET("/xx/{aa}/b{bb}")
+    @GET("/xx/{aa}/b{bb}aa")
     String xx2(@PathVariable("aa") String aa, @PathVariable("bb") String bb) {
         return "XX:" + aa + ":" + bb;
     }
@@ -29,11 +31,5 @@ public class App {
     String header(@RequestHeader("Host") String host, @RequestHeader("User-Agent") String userAgent) {
 
         return String.format("Host:%s\nUser-Agent:%s", host, userAgent);
-    }
-
-    // 处理异常
-    @ExceptionHandler(throwable = Exception.class)
-    void error(Exception e) {
-        LogUtils.error(getClass(), e.getMessage(), e);
     }
 }

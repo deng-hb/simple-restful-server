@@ -178,9 +178,11 @@ public class Server {
 
         private String uri;
 
-        private Map<String, String> parameters = new HashMap<String, String>();;
+        private Map<String, String> parameters = new HashMap<String, String>();
+        ;
 
-        private Map<String, String> headers = new HashMap<String, String>();;
+        private Map<String, String> headers = new HashMap<String, String>();
+        ;
 
         /**
          * 解析报文，待优化
@@ -256,8 +258,9 @@ public class Server {
     static class Response {
 
         // 先默认都返回成功
-        private static final String RESPONSE_HTML = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n%s";
-        private int code = 200;// TODO
+        private static final String RESPONSE_HTML = "HTTP/1.1 %s\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n%s";
+
+        private int code = 200;
 
         private Object body;
 
@@ -267,6 +270,10 @@ public class Server {
 
         private Response(Object body) {
             this.body = body;
+        }
+
+        private Response(int code) {
+            this.code = code;
         }
 
         /**
@@ -282,7 +289,27 @@ public class Server {
                 result = JSONUtils.toJson(body);
             }
 
-            result = String.format(RESPONSE_HTML, result);
+            // TODO
+            String status = "";
+            switch (code) {
+                case 200:
+                    status = "200 OK";
+                    break;
+                case 403:
+                    status = "403 Forbidden";
+                    break;
+                case 404:
+                    status = "404 Not Found";
+                    break;
+                case 405:
+                    status = "405 Method Not Allowed";
+                    break;
+                case 500:
+                    status = "500 Internal Server Error";
+                    break;
+            }
+
+            result = String.format(RESPONSE_HTML, status, result);
 
             return result.getBytes();
         }
@@ -291,9 +318,8 @@ public class Server {
             return new Response(body);
         }
 
-        public static Response build(int code) {
-            code = code;
-            return new Response("");
+        public static Response buildError(int code) {
+            return new Response(code);
         }
     }
 

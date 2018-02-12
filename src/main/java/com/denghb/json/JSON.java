@@ -14,12 +14,18 @@ import java.util.*;
 public class JSON {
 
     public static String toJSON(Object object) {
+        if (null == object) {
+            return null;
+        }
         StringBuilder sb = new StringBuilder();
         toJSON(object, sb, "yyyy-MM-dd HH:mm:ss");
         return sb.toString();
     }
 
     public static String toJSON(Object object, String dateFormat) {
+        if (null == object) {
+            return null;
+        }
         StringBuilder sb = new StringBuilder();
         toJSON(object, sb, dateFormat);
         return sb.toString();
@@ -115,6 +121,10 @@ public class JSON {
 
     public static <T> T parseJSON(Class<T> clazz, String json) {
 
+        if (null == json) {
+            return null;
+        }
+
         Map map = new HashMap();
         initParse(json, null, map);
         if (clazz == Map.class) {
@@ -130,6 +140,9 @@ public class JSON {
 
     public static <T> List<T> parseArrayJSON(Class<T> clazz, String json) {
 
+        if (null == json) {
+            return null;
+        }
         List<Object> list = new ArrayList<Object>();
         initParse(json, list, null);
 
