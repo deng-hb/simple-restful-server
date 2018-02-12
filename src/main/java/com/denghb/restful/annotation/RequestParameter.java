@@ -6,11 +6,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * HTTP method
+ * JDK 1.8才能获取参数名。通过获取类字节(asm|javassist)又太麻烦
  */
-@Target(ElementType.METHOD)
+@Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface GET {
-    String value();
+public @interface RequestParameter {
 
+    String value();
 }

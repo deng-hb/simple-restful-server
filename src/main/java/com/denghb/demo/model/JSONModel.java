@@ -20,6 +20,13 @@ public class JSONModel<T> {
 
         return model;
     }
+    public static <T> JSONModel buildFailure(String msg) {
+        JSONModel model = new JSONModel();
+        model.msg = msg;
+        model.code = 0;
+
+        return model;
+    }
 
     public int getCode() {
         return code;

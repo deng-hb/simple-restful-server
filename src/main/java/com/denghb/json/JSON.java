@@ -9,7 +9,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
- * 有时间再造一个轮子吧
+ *
  */
 public class JSON {
 
@@ -19,13 +19,13 @@ public class JSON {
         return sb.toString();
     }
 
-    public static String toJSON(Object object, String dataFormat) {
+    public static String toJSON(Object object, String dateFormat) {
         StringBuilder sb = new StringBuilder();
-        toJSON(object, sb, dataFormat);
+        toJSON(object, sb, dateFormat);
         return sb.toString();
     }
 
-    private static void toJSON(Object object, StringBuilder sb, String dataFormat) {
+    private static void toJSON(Object object, StringBuilder sb, String dateFormat) {
 
         if (object instanceof Map) {
             sb.append('{');
@@ -63,7 +63,7 @@ public class JSON {
                     sb.append(value);
                     sb.append('"');
                 } else {
-                    toJSON(value, sb, dataFormat);
+                    toJSON(value, sb, dateFormat);
                 }
             }
             sb.append(']');
@@ -71,7 +71,7 @@ public class JSON {
         } else {
             if (object instanceof Date) {
                 sb.append('"');
-                sb.append(format(dataFormat, (Date) object));
+                sb.append(format(dateFormat, (Date) object));
                 sb.append('"');
             } else if (object instanceof CharSequence) {
                 sb.append('"');
@@ -104,7 +104,7 @@ public class JSON {
                         sb.append(value);
                         sb.append('"');
                     } else {
-                        toJSON(value, sb, dataFormat);
+                        toJSON(value, sb, dateFormat);
                     }
 
                 }
@@ -328,9 +328,14 @@ public class JSON {
                         map.put(key.toString(), list);
                         break;
                     }
-                    // 数字
-                    if (c == ',') {
-                        map.put(key.toString(), tmp.toString());
+                    // 数字 || null
+                    if (c == ',' || c == '}' || c == ']') {
+                        String t = tmp.toString();
+                        if ("null".equals(t)) {
+                            map.put(key.toString(), null);
+                        } else {
+                            map.put(key.toString(), t);
+                        }
                         break;
                     }
                     if (c != ' ' && c != ':') {

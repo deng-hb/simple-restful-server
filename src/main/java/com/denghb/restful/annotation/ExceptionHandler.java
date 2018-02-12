@@ -6,11 +6,13 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * HTTP method
+ * 异常处理
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface GET {
-    String value();
+public @interface ExceptionHandler {
+    String value() default "";
+
+    Class throwable();// 异常类
 
 }

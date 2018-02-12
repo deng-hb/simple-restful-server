@@ -54,6 +54,12 @@ public class TestApp {
 
         System.out.println(res);
     }
+    @Test
+    public void pullUsers2() {
+        String res = HttpUtils.get(HOST + "/userList");
+
+        System.out.println(res);
+    }
 
     @Test
     public void createUser() {
@@ -90,6 +96,13 @@ public class TestApp {
     public void queryUser2() {
 
         String res = HttpUtils.get(HOST + "/user2?id=1");
+
+        System.out.println(res);
+    }
+    @Test
+    public void deleteUser1() {
+
+        String res = HttpUtils.delete(HOST + "/user/1");
 
         System.out.println(res);
     }

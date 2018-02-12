@@ -15,9 +15,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class Application {
 
+    static Map<Class, Object> _OBJECT = new ConcurrentHashMap<Class, Object>();
 
-    static Map<String, Application.Info> _INFO = new ConcurrentHashMap<String, Application.Info>();
-    static Map<Class, Object> _RESTful = new ConcurrentHashMap<Class, Object>();
+    static Map<String, Application.MethodInfo> _OBJECT_METHOD = new ConcurrentHashMap<String, Application.MethodInfo>();
 
     private Application() {
 
@@ -31,72 +31,90 @@ public class Application {
         // 在start之前
         server.setHandler(new Server.Handler() {
             public Server.Response execute(Server.Request request) {
-                try {
-                    LogUtils.info(getClass(), "{}\t{}", request.getMethod(), request.getUri());
+                LogUtils.info(getClass(), "{}\t{}", request.getMethod(), request.getUri());
 
-                    Map<String, String> pathVar = new HashMap<String, String>();
+                Map<String, String> pathVar = new HashMap<String, String>();
 
-                    String path = request.getMethod() + request.getUri();
-                    Info info = _INFO.get(path);
+                String path = request.getMethod() + request.getUri();
+                Application.MethodInfo info = _OBJECT_METHOD.get(path);
 
-                    if (null == info) {
-                        for (String path1 : _INFO.keySet()) {
-                            buildPath(path1, path, pathVar);
-                            if (!pathVar.isEmpty()) {
-                                info = _INFO.get(path1);
-                                break;
+                if (null == info) {
+                    // 参数在path上的匹配
+                    for (String path1 : _OBJECT_METHOD.keySet()) {
+                        buildPath(path1, path, pathVar);
+                        if (!pathVar.isEmpty()) {
+                            info = _OBJECT_METHOD.get(path1);
+                            break;
+                        }
+                    }
+
+                    if (pathVar.isEmpty()) {
+                        return Server.Response.build("404");
+                    }
+                }
+
+                Class cc = info.getClazz();
+                Object target = _OBJECT.get(cc);
+                if (null == target) {
+                    target = ReflectUtils.createInstance(cc);
+                    _OBJECT.put(cc, target);
+                }
+
+                Map<String, String> requestParameters = request.getParameters();
+                // 参数赋值
+                int pcount = info.parameters.size();
+                Object[] ps = new Object[pcount];
+
+                if (0 < pcount) {
+
+                    for (int i = 0; i < pcount; i++) {
+                        Param param = info.parameters.get(i);
+                        Annotation a = param.getAnnotation();
+                        String value = null;
+
+                        if (a instanceof RequestParameter) {
+                            String name = ((RequestParameter) a).value();
+                            value = requestParameters.get(name);
+                        } else if (a instanceof PathVariable) {
+                            String name = ((PathVariable) a).value();
+                            value = pathVar.get(name);
+                        } else if (a instanceof RequestHeader) {
+                            String name = ((RequestHeader) a).value();
+                            value = requestParameters.get(name);
+                        } else {
+                            // TODO
+                        }
+
+                        if (null != value) {
+                            // 日期
+                            if (param.getType() == String.class) {
+                                ps[i] = value;
+                            } else {
+                                try {
+                                    // 类型转换
+                                    ps[i] = param.getType().getConstructor(String.class).newInstance(value);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
                             }
                         }
 
-                        if (pathVar.isEmpty()) {
-                            return Server.Response.build("404");
-                        }
-                    }
-
-                    Class cc = info.getClazz();
-                    Object target = _RESTful.get(cc);
-                    if (null == target) {
-                        target = ReflectUtils.createInstance(cc);
-                        _RESTful.put(cc, target);
-                    }
-
-                    // 参数赋值
-                    int pcount = info.parameters.size();
-                    Object[] ps = new Object[pcount];
-
-                    if (0 < pcount) {
-
-                        for (int i = 0; i < pcount; i++) {
-                            Param param = info.parameters.get(i);
-                            if (param.isSingle()) {
-                                String value = null;
-                                String name = param.getName();
-
-                                int from = param.getFrom();
-                                if (1 == from) {
-                                    value = request.getParameters().get(name);
-                                } else if (2 == from) {
-                                    // path
-                                    value = pathVar.get(name);
-                                } else if (3 == from) {
-                                    // header
-                                    value = request.getHeaders().get(name);
-                                }
-
-                                if (param.getType() == String.class) {
-                                    ps[i] = value;
-                                } else {
-                                    // 类型转换
-                                    ps[i] = param.getType().getConstructor(String.class).newInstance(value);
-                                }
+                        if (a instanceof RequestBody) {
+                            String name = ((RequestBody) a).value();
+                            if (!"".equals(name)) {
+                                ps[i] = JSONUtils.fromJson(param.getType(), requestParameters.get(name));
                             } else {
+                                // 整个是对象
                                 ps[i] = JSONUtils.fromMap(param.getType(), request.getParameters());
                             }
                         }
                     }
 
+                }
+
+                try {
                     // 执行方法
-                    Method method = info.method;
+                    Method method = info.getMethod();
                     method.setAccessible(true);
                     Object result = method.invoke(target, ps);
                     return Server.Response.build(result);
@@ -125,27 +143,37 @@ public class Application {
 
                 GET get = method.getAnnotation(GET.class);
                 if (null != get) {
-                    add(GET.class.getSimpleName(), get.value(), new Info(c, method));
+                    add(GET.class.getSimpleName(), get.value(), new MethodInfo(c, method));
                     continue;
                 }
                 POST post = method.getAnnotation(POST.class);
                 if (null != post) {
-                    add(POST.class.getSimpleName(), post.value(), new Info(c, method));
+                    add(POST.class.getSimpleName(), post.value(), new MethodInfo(c, method));
                     continue;
                 }
 
+                DELETE delete = method.getAnnotation(DELETE.class);
+                if (null != delete) {
+                    add(DELETE.class.getSimpleName(), delete.value(), new MethodInfo(c, method));
+                    continue;
+                }
+
+                ExceptionHandler handler = method.getAnnotation(ExceptionHandler.class);
+                if (null != handler) {
+                    _OBJECT_METHOD.put(handler.value(), new MethodInfo(c, method));
+                }
             }
         }
     }
 
-    private static void add(String method, String path, Info info) {
+    private static void add(String method, String path, MethodInfo info) {
 
         String key = method + path;
-        if (_INFO.containsKey(key)) {
+        if (_OBJECT_METHOD.containsKey(key)) {
             throw new IllegalArgumentException("Duplicate @" + method + "(\"" + path + "\")");
         }
         LogUtils.debug(Application.class, "Method:{} Path:{}", method, path);
-        _INFO.put(key, info);
+        _OBJECT_METHOD.put(key, info);
     }
 
     /**
@@ -210,29 +238,7 @@ public class Application {
 
     }
 
-    private static Set<Class> SINGLE_TYPES = new HashSet<Class>();
-
-    static {
-        SINGLE_TYPES.add(int.class);
-        SINGLE_TYPES.add(long.class);
-        SINGLE_TYPES.add(float.class);
-        SINGLE_TYPES.add(double.class);
-
-        SINGLE_TYPES.add(Integer.class);
-        SINGLE_TYPES.add(String.class);
-        SINGLE_TYPES.add(Float.class);
-        SINGLE_TYPES.add(Long.class);
-        SINGLE_TYPES.add(Double.class);
-        SINGLE_TYPES.add(Number.class);
-        SINGLE_TYPES.add(Boolean.class);
-
-        SINGLE_TYPES.add(java.math.BigDecimal.class);
-        SINGLE_TYPES.add(java.math.BigInteger.class);
-
-        SINGLE_TYPES.add(java.util.Date.class);
-    }
-
-    private static class Info {
+    private static class MethodInfo {
 
         private Class clazz;
 
@@ -240,7 +246,7 @@ public class Application {
 
         private List<Param> parameters;// 所有参数名
 
-        public Info(Class clazz, Method method) {
+        public MethodInfo(Class clazz, Method method) {
             this.clazz = clazz;
             this.method = method;
 
@@ -256,30 +262,11 @@ public class Application {
             for (int i = 0; i < length; i++) {
 
                 Class pc = types[i];
-                if (!SINGLE_TYPES.contains(pc)) {// 非基本类型
-                    this.parameters.add(new Param(pc, null, false, 0));
-                    continue;
-                }
+                this.parameters.add(new Param(pc, null));// 先把类型填入
 
                 Annotation[] parameterAnnotations = method.getParameterAnnotations()[i];
                 for (Annotation annotation : parameterAnnotations) {
-
-                    if (annotation instanceof ParameterName) {
-                        ParameterName a = (ParameterName) annotation;
-                        this.parameters.add(new Param(pc, a.value(), true, 1));
-                    }
-                    //
-                    if (annotation instanceof PathVariable) {
-                        PathVariable a = (PathVariable) annotation;
-                        this.parameters.add(new Param(pc, a.value(), true, 2));
-
-                    }
-
-                    if (annotation instanceof RequestHeader) {
-                        RequestHeader a = (RequestHeader) annotation;
-                        this.parameters.add(new Param(pc, a.value(), true, 3));
-                    }
-
+                    this.parameters.set(i, new Param(pc, annotation));
                 }
             }
 
@@ -311,20 +298,15 @@ public class Application {
     }
 
 
+    // 一个参数只支持一个注解
     private static class Param {
-        private Class type;
+        private Class type;// 参数类型
 
-        private String name;// 非基本类型没有名字
+        private Annotation annotation;// 参数注解
 
-        private boolean single;// 基本类型
-
-        private int from;// 1:form 2:path 3:header  枚举？
-
-        public Param(Class type, String name, boolean single, int from) {
+        public Param(Class type, Annotation annotation) {
             this.type = type;
-            this.name = name;
-            this.single = single;
-            this.from = from;
+            this.annotation = annotation;
         }
 
         public Class getType() {
@@ -335,28 +317,12 @@ public class Application {
             this.type = type;
         }
 
-        public String getName() {
-            return name;
+        public Annotation getAnnotation() {
+            return annotation;
         }
 
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public boolean isSingle() {
-            return single;
-        }
-
-        public void setSingle(boolean single) {
-            this.single = single;
-        }
-
-        public int getFrom() {
-            return from;
-        }
-
-        public void setFrom(int from) {
-            this.from = from;
+        public void setAnnotation(Annotation annotation) {
+            this.annotation = annotation;
         }
     }
 }

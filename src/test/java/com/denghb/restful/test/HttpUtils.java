@@ -9,13 +9,16 @@ import java.security.cert.X509Certificate;
 import java.util.Map;
 
 /**
- * Created by denghb on 16/8/29.
+ * 可以用socket连接来实现
  */
 public class HttpUtils {
 
 
     public static String get(String url) {
         return request(url, "GET", null);
+    }
+    public static String delete(String url) {
+        return request(url, "DELETE", null);
     }
 
     public static String post(String url, Map<String, String> param) {

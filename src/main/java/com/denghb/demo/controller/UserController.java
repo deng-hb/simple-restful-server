@@ -39,13 +39,34 @@ public class UserController {
         return JSONModel.buildSuccess("ok", list);
     }
 
+    @GET("/userList")
+    List<User> list2() {
+
+        List<User> list = new ArrayList<User>();
+        for (Long id : data.keySet()) {
+            list.add(data.get(id));
+        }
+
+        return list;
+    }
+
     @POST("/user")
-    JSONModel create(User user) {
+    JSONModel create(@RequestBody User user) {
         id = id + 1;
         user.setId(id);
         data.put(id, user);
 
         return JSONModel.buildSuccess("OK");
+    }
+
+    @DELETE("/user/{id}")
+    JSONModel create(@PathVariable("id") Long id) {
+        if (data.containsKey(id)) {
+            data.remove(id);
+            return JSONModel.buildSuccess("OK");
+        }
+
+        return JSONModel.buildFailure("用户不存在");
     }
 
     @GET("/user/{id}")
@@ -55,13 +76,13 @@ public class UserController {
     }
 
     @GET("/user2")
-    JSONModel<User> query2(@ParameterName("id") Long id) {
+    JSONModel<User> query2(@RequestParameter("id") Long id) {
         User user = data.get(id);
         return JSONModel.buildSuccess("ok", user);
     }
 
     @POST("/user2")
-    JSONModel create(@ParameterName("name") String name, @ParameterName("mobile") String mobile) {
+    JSONModel create(@RequestParameter("name") String name, @RequestParameter("mobile") String mobile) {
         id = id + 1;
         User user = new User();
         user.setName(name);

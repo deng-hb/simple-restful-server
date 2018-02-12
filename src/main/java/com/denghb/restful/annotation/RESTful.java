@@ -6,8 +6,11 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Retention(RetentionPolicy.RUNTIME)
+/**
+ * RESTful 控制器
+ */
 @Target(value = {ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
 public @interface RESTful {
     String value() default "";
 }
