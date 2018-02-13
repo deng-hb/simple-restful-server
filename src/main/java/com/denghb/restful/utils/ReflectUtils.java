@@ -22,18 +22,18 @@ public class ReflectUtils {
     /**
      * 获得实体类的所有属性（该方法递归的获取当前类及父类中声明的字段。最终结果以list形式返回）
      */
-    public static Set<Field> getFields(Class<?> clazz) {
+    public static List<Field> getFields(Class<?> clazz) {
         if (clazz == null) {
             return null;
         }
 
-        Set<Field> fields = new HashSet<Field>();
+        List<Field> fields = new ArrayList<Field>();
         Field[] classFields = clazz.getDeclaredFields();
         fields.addAll(Arrays.asList(classFields));
 
         Class<?> superclass = clazz.getSuperclass();
         if (superclass != null) {
-            Set<Field> superClassFields = getFields(superclass);
+            List<Field> superClassFields = getFields(superclass);
             fields.addAll(superClassFields);
         }
         return fields;
@@ -97,6 +97,24 @@ public class ReflectUtils {
 
         try {
             return clazz.newInstance();
+        } catch (Exception e) {
+            throw new RuntimeException("Can't create instance（" + clazz.getName() + "）  by reflect!", e);
+        }
+    }
+
+    /**
+     * 有参构造创建对象
+     */
+    public static Object constructorInstance(Class<?> clazz, Class type, Object value) {
+        return constructorInstance(clazz, new Class[]{type}, new Object[]{value});
+    }
+
+    public static Object constructorInstance(Class<?> clazz, Class[] types, Object[] values) {
+        if (clazz == null) {
+            throw new IllegalArgumentException("Object class mustn't be null");
+        }
+        try {
+            return clazz.getConstructor(types).newInstance(values);
         } catch (Exception e) {
             throw new RuntimeException("Can't create instance（" + clazz.getName() + "）  by reflect!", e);
         }

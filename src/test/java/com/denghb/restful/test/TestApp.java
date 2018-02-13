@@ -35,6 +35,21 @@ public class TestApp {
         System.out.println(res);
     }
 
+
+    @Test
+    public void test404() {
+        String res = HttpUtils.get(HOST + "/404");
+
+        System.out.println(res);
+    }
+
+    @Test
+    public void testFilter() {
+        String res = HttpUtils.get(HOST + "/?Token=asdasdasd");
+
+        System.out.println(res);
+    }
+
     @Test
     public void testXX3() {
         String res = HttpUtils.get(HOST + "/xx/asdasdas/basdasdasdaa");

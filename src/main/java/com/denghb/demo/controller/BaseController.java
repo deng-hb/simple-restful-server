@@ -2,6 +2,7 @@ package com.denghb.demo.controller;
 
 import com.denghb.demo.MyException;
 import com.denghb.demo.model.JSONModel;
+import com.denghb.restful.RESTfulException;
 import com.denghb.restful.annotation.Error;
 import com.denghb.restful.annotation.*;
 import com.denghb.restful.utils.LogUtils;
@@ -14,9 +15,9 @@ public class BaseController {
      * URL访问过滤
      */
     @Filter
-    boolean filter(@RequestHeader("Token") String token) {
+    void filter(@RequestParameter("Token") String token) {
 
-        return false;
+        System.out.println(token);
     }
 
     /**
@@ -35,8 +36,17 @@ public class BaseController {
     void error(Exception e) {
         LogUtils.error(getClass(), e.getMessage(), e);
     }
+
+    // 异常返回 字符串
     @Error(throwable = MyException.class)
-    void error2(MyException e) {
+    String error2(MyException e) {
+        LogUtils.error(getClass(), e.getMessage(), e);
+        return "error2";
+    }
+
+    @Error(throwable = RESTfulException.class)
+    void error3(RESTfulException e) {
+        System.err.println(e.getCode());
         LogUtils.error(getClass(), e.getMessage(), e);
     }
 
@@ -45,6 +55,7 @@ public class BaseController {
     void outError() throws Exception {
         throw new Exception("error");
     }
+
     @GET("/error2")
     void outError2() throws Exception {
         throw new MyException("my error");

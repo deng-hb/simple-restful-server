@@ -47,107 +47,125 @@ public class Application {
             public Server.Response execute(Server.Request request) {
                 LogUtils.info(getClass(), "{}\t{}", request.getMethod(), request.getUri());
 
-                Map<String, String> pathVar = new HashMap<String, String>();
+                // 过滤
+                Object object = handlerFilter(request);
+                if (null != object) {
+                    return Server.Response.build(object);
+                }
 
                 String path = request.getMethod() + request.getUri();
                 Application.MethodInfo info = _OBJECT_METHOD.get(path);
+                Map<String, String> pathVariables = new HashMap<String, String>();
 
                 if (null == info) {
                     // 参数在path上的匹配
                     for (String path1 : _OBJECT_METHOD.keySet()) {
-                        buildPath(path1, path, pathVar);
-                        if (!pathVar.isEmpty()) {
+                        buildPath(path1, path, pathVariables);
+                        if (!pathVariables.isEmpty()) {
                             info = _OBJECT_METHOD.get(path1);
                             break;
                         }
                     }
 
-                    if (pathVar.isEmpty()) {
+                    if (pathVariables.isEmpty()) {
+                        Object result = handlerError(new RESTfulException("404 Not Found[" + path + "]", 404));
+                        if (null != result) {
+                            return Server.Response.build(result);
+                        }
                         return Server.Response.buildError(404);
                     }
                 }
 
-                Object target = getObject(info.getClazz());
-
-                Map<String, String> requestParameters = request.getParameters();
-                // 参数赋值
-                int pcount = info.parameters.size();
-                Object[] ps = new Object[pcount];
-
-                if (0 < pcount) {
-
-                    for (int i = 0; i < pcount; i++) {
-                        Param param = info.parameters.get(i);
-                        Annotation a = param.getAnnotation();
-                        String value = null;
-
-                        if (a instanceof RequestParameter) {
-                            String name = ((RequestParameter) a).value();
-                            value = requestParameters.get(name);
-                        } else if (a instanceof PathVariable) {
-                            String name = ((PathVariable) a).value();
-                            value = pathVar.get(name);
-                        } else if (a instanceof RequestHeader) {
-                            String name = ((RequestHeader) a).value();
-                            value = requestParameters.get(name);
-                        } else {
-                            // TODO
-                        }
-
-                        if (null != value) {
-                            // TODO 日期格式
-                            if (param.getType() == String.class) {
-                                ps[i] = value;
-                            } else {
-                                try {
-                                    // 类型转换
-                                    ps[i] = param.getType().getConstructor(String.class).newInstance(value);
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
-                            }
-                        }
-
-                        if (a instanceof RequestBody) {
-                            String name = ((RequestBody) a).value();
-                            if (!"".equals(name)) {
-                                ps[i] = JSONUtils.fromJson(param.getType(), requestParameters.get(name));
-                            } else {
-                                // 整个是对象
-                                ps[i] = JSONUtils.fromMap(param.getType(), request.getParameters());
-                            }
-                        }
-                    }
-
-                }
-                Object result = null;
-
                 try {
+
+                    Object target = getObject(info.getClazz());
+
                     // 执行path对应方法
                     Method method = info.getMethod();
                     method.setAccessible(true);
-                    result = method.invoke(target, ps);
+                    Object result = method.invoke(target, buildParams(info, request.getParameters(), pathVariables));
 
-                    result = Server.Response.build(result);
+                    return Server.Response.build(result);
                 } catch (InvocationTargetException e) {
                     // 调用方法抛出异常
-                    try {
-                        result = handlerError(e.getTargetException());
-                    } catch (Exception e1) {
-                        e1.printStackTrace();
+                    Object result = handlerError(e.getTargetException());
+                    if (null != result) {
+                        return Server.Response.build(result);
                     }
-
                 } catch (Exception e) {
                     LogUtils.error(getClass(), e.getMessage(), e);
+
+                    // 内部错误
+                    Object result = handlerError(new RESTfulException(e.getMessage(), 500));
+                    if (null != result) {
+                        return Server.Response.build(result);
+                    }
                 }
-                if (null == request) {
-                    return Server.Response.buildError(500);
-                }
-                return Server.Response.build(result);
+
+                return Server.Response.buildError(500);
             }
         });
 
         server.start(args);
+    }
+
+
+    /**
+     * 参数列表赋值
+     */
+    private static Object[] buildParams(Application.MethodInfo info, Map<String, String> requestParameters, Map<String, String> pathVariables) {
+        // 参数赋值
+        int pcount = info.parameters.size();
+        Object[] ps = new Object[pcount];
+
+        if (0 == pcount) {
+            return ps;
+        }
+        for (int i = 0; i < pcount; i++) {
+            Param param = info.parameters.get(i);
+            Annotation a = param.getAnnotation();
+            String value = null;
+
+            if (a instanceof RequestParameter) {
+                String name = ((RequestParameter) a).value();
+                value = requestParameters.get(name);
+            } else if (a instanceof PathVariable) {
+                String name = ((PathVariable) a).value();
+                value = pathVariables.get(name);
+            } else if (a instanceof RequestHeader) {
+                String name = ((RequestHeader) a).value();
+                value = requestParameters.get(name);
+            } else {
+                // TODO
+            }
+
+            if (null != value) {
+                // TODO 日期格式
+                if (param.getType() == String.class) {
+                    ps[i] = value;
+                } else {
+                    try {
+                        // 类型转换
+                        ps[i] = param.getType().getConstructor(String.class).newInstance(value);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+            if (a instanceof RequestBody) {
+                String name = ((RequestBody) a).value();
+                if (!"".equals(name)) {
+                    ps[i] = JSONUtils.fromJson(param.getType(), requestParameters.get(name));
+                } else {
+                    // 整个是对象
+                    ps[i] = JSONUtils.fromMap(param.getType(), requestParameters);
+                }
+            }
+        }
+
+
+        return ps;
     }
 
     /**
@@ -164,17 +182,43 @@ public class Application {
         return target;
     }
 
+    private static Object handlerFilter(Server.Request request) {
+        try {
+            String key = Filter.class.getSimpleName() + request.getUri();
+            Application.MethodInfo info = _OBJECT_METHOD.get(key);
+
+            if (null == info) {
+                // TODO
+                // /* -> /a | /ab | /c/d/e
+                // /a/* -> /a/ | /a/b | /a/b/c
+                // /a/*/c -> /a/b/c | /a/bbb/c
+            }
+
+            Object target = getObject(info.getClazz());
+            Object[] ps = buildParams(info,request.getParameters(),null);
+
+            Method method = info.getMethod();
+            method.setAccessible(true);
+            return method.invoke(target, ps);
+        } catch (IllegalAccessException e1) {
+            e1.printStackTrace();
+        } catch (InvocationTargetException e1) {
+            e1.printStackTrace();
+        }
+        return null;
+    }
+
     /**
      * 将错误信息输出
      *
      * @param e
      */
-    private static Object handlerError(Throwable e) throws Exception {
+    private static Object handlerError(Throwable e) {
 
 
         String key = Error.class.getSimpleName() + e.getClass().getSimpleName();
         Application.MethodInfo info = _OBJECT_METHOD.get(key);
-        if (null != info) {
+        if (null == info) {
             return null;
         }
 
@@ -195,8 +239,14 @@ public class Application {
         }
         Method method = info.getMethod();
         method.setAccessible(true);
-        return method.invoke(target, ps);
-
+        try {
+            return method.invoke(target, ps);
+        } catch (IllegalAccessException e1) {
+            e1.printStackTrace();
+        } catch (InvocationTargetException e1) {
+            e1.printStackTrace();
+        }
+        return null;
     }
 
 
@@ -239,6 +289,7 @@ public class Application {
         }
     }
 
+    // 添加到方法对象
     private static void add(String method, String path, MethodInfo info) {
 
         String key = method + path;
@@ -397,4 +448,6 @@ public class Application {
             this.annotation = annotation;
         }
     }
+
+
 }

@@ -86,7 +86,7 @@ public class JSON {
             } else if (object instanceof Number) {
                 sb.append(object);
             } else {
-                Set<Field> fields = ReflectUtils.getFields(object.getClass());
+                List<Field> fields = ReflectUtils.getFields(object.getClass());
 
                 sb.append('{');
                 boolean a = false;
@@ -119,6 +119,9 @@ public class JSON {
         }
     }
 
+    /**
+     * {"",""}
+     */
     public static <T> T parseJSON(Class<T> clazz, String json) {
 
         if (null == json) {
@@ -138,6 +141,9 @@ public class JSON {
         return null;
     }
 
+    /**
+     * ["",""]
+     */
     public static <T> List<T> parseArrayJSON(Class<T> clazz, String json) {
 
         if (null == json) {
@@ -184,7 +190,7 @@ public class JSON {
     public static <T> T map2Object(Class<T> clazz, Map map) {
 
         Object object = ReflectUtils.createInstance(clazz);
-        Set<Field> fields = ReflectUtils.getFields(clazz);
+        List<Field> fields = ReflectUtils.getFields(clazz);
         for (Field field : fields) {
             Object value = map.get(field.getName());
             if (null == value) {
@@ -200,10 +206,11 @@ public class JSON {
                     privateField.setAccessible(true);
                     String fieldValue = (String) privateField.get(field);//获得私有字段值
 
-                    String t = fieldValue.substring(fieldValue.indexOf("<") + 2, fieldValue.length() - 3);
-                    t = t.replaceAll("\\/", "\\.");
-                    tClass = Class.forName(t);
-
+                    if (null != fieldValue) {// 没有明确类型
+                        String t = fieldValue.substring(fieldValue.indexOf("<") + 2, fieldValue.length() - 3);
+                        t = t.replaceAll("\\/", "\\.");
+                        tClass = Class.forName(t);
+                    }
 //                    System.out.println(t);
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -216,26 +223,34 @@ public class JSON {
                     }
                 }
                 ReflectUtils.setFieldValue(field, object, list);
-                continue;
-            }
-
-            if (type == java.lang.String.class || type == java.util.Map.class) {
+            } else if (type == java.lang.String.class || type == java.util.Map.class) {
+                // 字符串 || map
                 ReflectUtils.setFieldValue(field, object, value);
-                continue;
-            }
-            // 日期
-            if (type == java.util.Date.class) {
+            } else if (type == java.util.Date.class) {
+                // 日期
                 Date date = parseStringToDate(String.valueOf(value));
                 ReflectUtils.setFieldValue(field, object, date);
-                continue;
-            }
-
-            // 其他类型
-            try {
-                value = type.getConstructor(String.class).newInstance(String.valueOf(value));
+            } else if (type.getSuperclass() == Number.class) {
+                // 数字
+                value = ReflectUtils.constructorInstance(type, String.class, String.valueOf(value));
                 ReflectUtils.setFieldValue(field, object, value);
-            } catch (Exception e) {
-                e.printStackTrace();
+            } else if (type.getName().startsWith("[L")) {
+                // TODO 数组
+                /* List list = (List) value;
+                Object array = Array.newInstance(type, list.size());
+                for (int i = 0;i < list.size();i++) {
+                    Array.set(array, i, list.get(i));
+                }
+                ReflectUtils.setFieldValue(field, object, array);
+                */
+            } else if (type.isPrimitive()) {
+                // TODO 基本值类型
+//                ReflectUtils.setFieldValue(field, object, value);
+
+            } else {
+
+                // TODO 未知类型
+                ReflectUtils.setFieldValue(field, object, value);
             }
 
         }
@@ -243,7 +258,7 @@ public class JSON {
         return (T) object;
     }
 
-    // 字符串转日期
+    // 预测日期字符串然后转换日期
     private static Date parseStringToDate(String date) {
 
         String parse = date;
@@ -377,26 +392,4 @@ public class JSON {
         return index;
     }
 
-
-    private static Set<Class> SINGLE_TYPES = new HashSet<Class>();
-
-    static {
-        SINGLE_TYPES.add(int.class);
-        SINGLE_TYPES.add(long.class);
-        SINGLE_TYPES.add(float.class);
-        SINGLE_TYPES.add(double.class);
-
-        SINGLE_TYPES.add(Integer.class);
-        SINGLE_TYPES.add(String.class);
-        SINGLE_TYPES.add(Float.class);
-        SINGLE_TYPES.add(Long.class);
-        SINGLE_TYPES.add(Double.class);
-        SINGLE_TYPES.add(Number.class);
-        SINGLE_TYPES.add(Boolean.class);
-
-        SINGLE_TYPES.add(java.math.BigDecimal.class);
-        SINGLE_TYPES.add(java.math.BigInteger.class);
-
-        SINGLE_TYPES.add(java.util.Date.class);
-    }
 }

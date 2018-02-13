@@ -3,6 +3,7 @@ package com.denghb.restful.test;
 import com.denghb.json.JSON;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -51,15 +52,19 @@ public class JSONTest {
     public static class User {
         private String name;
 
+        private Long luckNumber;
+
+        private int age;
+
         private Date birthday;
+
+        private String[] likes;
+
+        private List list;
 
         private Map<String, String> book1;
 
         private List<Book> books;
-
-        public User() {
-
-        }
 
         public String getName() {
             return name;
@@ -69,12 +74,44 @@ public class JSONTest {
             this.name = name;
         }
 
+        public Long getLuckNumber() {
+            return luckNumber;
+        }
+
+        public void setLuckNumber(Long luckNumber) {
+            this.luckNumber = luckNumber;
+        }
+
+        public int getAge() {
+            return age;
+        }
+
+        public void setAge(int age) {
+            this.age = age;
+        }
+
         public Date getBirthday() {
             return birthday;
         }
 
         public void setBirthday(Date birthday) {
             this.birthday = birthday;
+        }
+
+        public String[] getLikes() {
+            return likes;
+        }
+
+        public void setLikes(String[] likes) {
+            this.likes = likes;
+        }
+
+        public List getList() {
+            return list;
+        }
+
+        public void setList(List list) {
+            this.list = list;
         }
 
         public Map<String, String> getBook1() {
@@ -97,7 +134,11 @@ public class JSONTest {
         public String toString() {
             return "User{" +
                     "name='" + name + '\'' +
+                    ", luckNumber=" + luckNumber +
+                    ", age=" + age +
                     ", birthday=" + birthday +
+                    ", likes=" + Arrays.toString(likes) +
+                    ", list=" + list +
                     ", book1=" + book1 +
                     ", books=" + books +
                     '}';
@@ -106,10 +147,14 @@ public class JSONTest {
 
     public static void main(String[] args) {
         String json1 = "{ \"name\" :    \"张三\" ,\"birthday\":\"1990-01-01\"}";
-        String json2 = "[ { \"name\" :    \"张三\" },{\"birthday\":\"1990-01-01\"}]";
+        String json2 = "[ { \"name\" :    \"张三\" ,\"age\":24,\"luckNumber\":100000},{\"birthday\":\"1990-01-01\"}]";
         String json3 = "[  \"name\", \"张三\" ,\"birthday\",\"1990-01-01\"]";
         String json4 = "{ \"name\" :    \"张三\" ,\"birthday\":\"1990-01-01 09:23\", \"book1\":{ \"name\":\"西游记\" }}";
         String json5 = "{ \"name\" :    \"张三\" ,\"birthday\":\"1990-01-01\", \"books\":[{ \"name\":\"西游记\" },{ \"name\":\"水浒传\" }]}";
+        String json6 = "{ \"name\" :    \"张三\" ,\"birthday\":\"1990-01-01\", \"books\":[{ \"name\":\"西游记\" },{ \"name\":\"水浒传\" }],\"list\":[\"1\",\"2\"]}";
+
+        String json7 = "{ \"name\" :    \"张三\" ,\"birthday\":\"1990-01-01\", \"books\":[{ \"name\":\"西游记\" },{ \"name\":\"水浒传\" }],\"list\":[\"1\",\"2\"],   \"likes\":[\"music\",\"看剧\"]}";
+
 
         System.out.println("---------------------------parse");
 
@@ -127,6 +172,11 @@ public class JSONTest {
         User obj5 = JSON.parseJSON(User.class, json5);
         System.out.println("5:" + obj5);
 
+        User obj6 = JSON.parseJSON(User.class, json6);
+        System.out.println("6:" + obj6);
+
+        User obj7 = JSON.parseJSON(User.class, json7);
+        System.out.println("7:" + obj7);
 
         System.out.println("---------------------------toJSON");
 
@@ -145,5 +195,11 @@ public class JSONTest {
 
         String res5 = JSON.toJSON(obj5);
         System.out.println("5:" + res5);
+
+        String res6 = JSON.toJSON(obj6);
+        System.out.println("6:" + res6);
+
+        String res7 = JSON.toJSON(obj7);
+        System.out.println("7:" + res7);
     }
 }
