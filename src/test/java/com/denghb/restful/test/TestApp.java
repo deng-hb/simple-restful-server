@@ -1,7 +1,9 @@
 package com.denghb.restful.test;
 
 import com.denghb.demo.domain.User;
+import com.denghb.restful.Application;
 import com.denghb.restful.utils.JSONUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -21,6 +23,11 @@ public class TestApp {
         // 先启动RESTful服务
     }
 
+    @After
+    public void dic() {
+        Application.stop();
+    }
+
     @Test
     public void test() {
         String res = HttpUtils.get(HOST);
@@ -33,6 +40,55 @@ public class TestApp {
         String res = HttpUtils.get(HOST + "/xx");
 
         System.out.println(res);
+    }
+
+    @Test
+    public void testa() {
+        // /* -> /a | /ab | /c/d/e
+        // /a/* -> /a/ | /a/b | /a/b/c
+        // /a/*/c -> /a/b/c | /a/bbb/c
+
+        System.out.println(compre("/a/*1112/", "/a/1mmb111"));
+
+    }
+
+    private boolean compre(String origin, String uri) {
+
+        if (-1 == origin.indexOf('*')) {
+            return false;
+        }
+
+        String[] tmp1s = origin.split("\\/");
+        String[] tmp2s = uri.split("\\/");
+        if (tmp1s.length != tmp2s.length) {
+            return false;
+        }
+
+        for (int i = 0; i < tmp1s.length; i++) {
+            String s1 = tmp1s[i];
+            String s2 = tmp2s[i];
+
+            int start = s1.indexOf('*');
+            if (-1 < start) {
+
+                String s1start = s1.substring(0, start);
+
+                if (!s2.startsWith(s1start)) {
+                    return false;
+                }
+                int end = s1.lastIndexOf('*');
+                String s1end = s1.substring(end + 1, s1.length());
+
+                if (!s2.endsWith(s1end)) {
+                    return false;
+                }
+
+            } else if (!s1.equals(s2)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
 
@@ -56,18 +112,21 @@ public class TestApp {
 
         System.out.println(res);
     }
+
     @Test
     public void testError() {
         String res = HttpUtils.get(HOST + "/error");
 
         System.out.println(res);
     }
+
     @Test
     public void testError2() {
         String res = HttpUtils.get(HOST + "/error2");
 
         System.out.println(res);
     }
+
     @Test
     public void testHeader() {
         String res = HttpUtils.get(HOST + "/test/header");
@@ -81,6 +140,7 @@ public class TestApp {
 
         System.out.println(res);
     }
+
     @Test
     public void pullUsers2() {
         String res = HttpUtils.get(HOST + "/userList");
@@ -126,6 +186,7 @@ public class TestApp {
 
         System.out.println(res);
     }
+
     @Test
     public void deleteUser1() {
 

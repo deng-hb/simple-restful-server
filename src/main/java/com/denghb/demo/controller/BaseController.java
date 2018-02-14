@@ -3,6 +3,7 @@ package com.denghb.demo.controller;
 import com.denghb.demo.MyException;
 import com.denghb.demo.model.JSONModel;
 import com.denghb.restful.RESTfulException;
+import com.denghb.restful.Server;
 import com.denghb.restful.annotation.Error;
 import com.denghb.restful.annotation.*;
 import com.denghb.restful.utils.LogUtils;
@@ -15,9 +16,19 @@ public class BaseController {
      * URL访问过滤
      */
     @Filter
-    void filter(@RequestParameter("Token") String token) {
+    void filter(@RequestHeader("User-Agent") String userAgent, @RequestParameter("Token") String token, Server.
+            Request request)
 
+    {
+        LogUtils.info(getClass(), "filter start");
         System.out.println(token);
+        System.out.println(request);
+
+        // 改变请求参数
+        request.getParameters().put("Token", "changeToken");
+        System.out.println(userAgent);
+        LogUtils.info(getClass(), "filter end");
+
     }
 
     /**
@@ -25,7 +36,11 @@ public class BaseController {
      */
     @Filter(value = "/user")
     JSONModel filter2(@RequestHeader("Token") String token) {
+        LogUtils.info(getClass(), "Test Filter");
+        if (null == token) {
+            return JSONModel.buildFailure("请登录");
 
+        }
         return null;// 放行
     }
 

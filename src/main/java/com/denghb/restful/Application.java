@@ -33,6 +33,8 @@ public class Application {
      */
     static Map<String, Application.MethodInfo> _OBJECT_METHOD = new ConcurrentHashMap<String, Application.MethodInfo>();
 
+    static Server _SERVER = new Server();
+
     private Application() {
 
     }
@@ -41,9 +43,8 @@ public class Application {
 
         init(clazz);
 
-        Server server = new Server();
         // 在start之前
-        server.setHandler(new Server.Handler() {
+        _SERVER.setHandler(new Server.Handler() {
             public Server.Response execute(Server.Request request) {
                 LogUtils.info(getClass(), "{}\t{}", request.getMethod(), request.getUri());
 
@@ -83,7 +84,7 @@ public class Application {
                     // 执行path对应方法
                     Method method = info.getMethod();
                     method.setAccessible(true);
-                    Object result = method.invoke(target, buildParams(info, request.getParameters(), pathVariables));
+                    Object result = method.invoke(target, buildParams(info, request, pathVariables));
 
                     return Server.Response.build(result);
                 } catch (InvocationTargetException e) {
@@ -106,14 +107,24 @@ public class Application {
             }
         });
 
-        server.start(args);
+        _SERVER.start(args);
     }
 
+    /**
+     * 停止服务
+     */
+    public static void stop() {
+        if (null != _SERVER) {
+            _SERVER.shutdown();
+            _SERVER = null;
+        }
+    }
 
     /**
      * 参数列表赋值
      */
-    private static Object[] buildParams(Application.MethodInfo info, Map<String, String> requestParameters, Map<String, String> pathVariables) {
+    private static Object[] buildParams(Application.MethodInfo info, Server.Request request, Map<String, String> pathVariables) {
+
         // 参数赋值
         int pcount = info.parameters.size();
         Object[] ps = new Object[pcount];
@@ -121,6 +132,7 @@ public class Application {
         if (0 == pcount) {
             return ps;
         }
+
         for (int i = 0; i < pcount; i++) {
             Param param = info.parameters.get(i);
             Annotation a = param.getAnnotation();
@@ -128,13 +140,18 @@ public class Application {
 
             if (a instanceof RequestParameter) {
                 String name = ((RequestParameter) a).value();
-                value = requestParameters.get(name);
+                value = request.getParameters().get(name);
             } else if (a instanceof PathVariable) {
                 String name = ((PathVariable) a).value();
                 value = pathVariables.get(name);
             } else if (a instanceof RequestHeader) {
                 String name = ((RequestHeader) a).value();
-                value = requestParameters.get(name);
+                value = request.getHeaders().get(name);
+            } else if (a instanceof RequestBody) {
+                // 整个是对象
+                ps[i] = JSONUtils.fromMap(param.getType(), request.getParameters());
+            } else if (param.getType() == Server.Request.class) {
+                ps[i] = request;
             } else {
                 // TODO
             }
@@ -144,27 +161,11 @@ public class Application {
                 if (param.getType() == String.class) {
                     ps[i] = value;
                 } else {
-                    try {
-                        // 类型转换
-                        ps[i] = param.getType().getConstructor(String.class).newInstance(value);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-
-            if (a instanceof RequestBody) {
-                String name = ((RequestBody) a).value();
-                if (!"".equals(name)) {
-                    ps[i] = JSONUtils.fromJson(param.getType(), requestParameters.get(name));
-                } else {
-                    // 整个是对象
-                    ps[i] = JSONUtils.fromMap(param.getType(), requestParameters);
+                    // 构造函数实例化
+                    ps[i] = ReflectUtils.constructorInstance(param.getType(), String.class, value);
                 }
             }
         }
-
-
         return ps;
     }
 
@@ -185,65 +186,107 @@ public class Application {
     private static Object handlerFilter(Server.Request request) {
         try {
             String key = Filter.class.getSimpleName() + request.getUri();
-            Application.MethodInfo info = _OBJECT_METHOD.get(key);
 
+
+            // TODO
+            // /* -> /a | /ab | /c/d/e
+            // /a/* -> /a/ | /a/b | /a/b/c
+            // /a/*/c -> /a/b/c | /a/bbb/c
+            Application.MethodInfo info = null;
+            for (String key1 : _OBJECT_METHOD.keySet()) {
+                boolean b = comparePath(key1, key);
+                if (b) {
+                    info = _OBJECT_METHOD.get(key1);
+                    break;
+                }
+
+            }
             if (null == info) {
-                // TODO
-                // /* -> /a | /ab | /c/d/e
-                // /a/* -> /a/ | /a/b | /a/b/c
-                // /a/*/c -> /a/b/c | /a/bbb/c
+                return null;
             }
 
+
             Object target = getObject(info.getClazz());
-            Object[] ps = buildParams(info,request.getParameters(),null);
+            Object[] ps = buildParams(info, request, null);
 
             Method method = info.getMethod();
             method.setAccessible(true);
             return method.invoke(target, ps);
-        } catch (IllegalAccessException e1) {
-            e1.printStackTrace();
         } catch (InvocationTargetException e1) {
+            return handlerError(e1);
+        } catch (Exception e1) {
             e1.printStackTrace();
         }
         return null;
     }
 
+    private static boolean comparePath(String origin, String uri) {
+
+        String[] tmp1s = origin.split("\\/");
+        String[] tmp2s = uri.split("\\/");
+        if (tmp1s.length != tmp2s.length) {
+            return false;
+        }
+
+        for (int i = 0; i < tmp1s.length; i++) {
+            String s1 = tmp1s[i];
+            String s2 = tmp2s[i];
+
+            int start = s1.indexOf('*');
+            if (-1 < start) {
+
+                String s1start = s1.substring(0, start);
+
+                if (!s2.startsWith(s1start)) {
+                    return false;
+                }
+                int end = s1.lastIndexOf('*');
+                String s1end = s1.substring(end + 1, s1.length());
+
+                if (!s2.endsWith(s1end)) {
+                    return false;
+                }
+
+            } else if (!s1.equals(s2)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /**
-     * 将错误信息输出
-     *
-     * @param e
+     * 错误处理
      */
     private static Object handlerError(Throwable e) {
 
 
-        String key = Error.class.getSimpleName() + e.getClass().getSimpleName();
-        Application.MethodInfo info = _OBJECT_METHOD.get(key);
-        if (null == info) {
-            return null;
-        }
+        try {
+            String key = Error.class.getSimpleName() + e.getClass().getSimpleName();
+            Application.MethodInfo info = _OBJECT_METHOD.get(key);
+            if (null == info) {
+                return null;
+            }
 
-        Object target = getObject(info.getClazz());
+            Object target = getObject(info.getClazz());
 
-        // 参数赋值
-        int pcount = info.parameters.size();
-        Object[] ps = new Object[pcount];
+            // 参数赋值
+            int pcount = info.parameters.size();
+            Object[] ps = new Object[pcount];
 
-        if (0 < pcount) {
+            if (0 < pcount) {
 
-            for (int i = 0; i < pcount; i++) {
-                Param param = info.parameters.get(i);
-                if (param.getType() == e.getClass()) {
-                    ps[i] = e;
+                for (int i = 0; i < pcount; i++) {
+                    Param param = info.parameters.get(i);
+                    if (param.getType() == e.getClass()) {
+                        ps[i] = e;
+                    }
                 }
             }
-        }
-        Method method = info.getMethod();
-        method.setAccessible(true);
-        try {
+            Method method = info.getMethod();
+            method.setAccessible(true);
             return method.invoke(target, ps);
-        } catch (IllegalAccessException e1) {
-            e1.printStackTrace();
-        } catch (InvocationTargetException e1) {
+        } catch (Exception e1) {
             e1.printStackTrace();
         }
         return null;
@@ -357,7 +400,6 @@ public class Application {
             pathVar.put(key, value);
 
         }
-
 
     }
 

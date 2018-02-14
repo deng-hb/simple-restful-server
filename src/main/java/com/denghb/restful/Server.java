@@ -22,6 +22,8 @@ public class Server {
 
     private static int DEFAULT_PORT = 8888;
 
+    private boolean shutdown = false;
+
     public interface Handler {
         Response execute(Request request);
     }
@@ -54,17 +56,24 @@ public class Server {
         int port = DEFAULT_PORT;
 
         try {
-            for (String p : args) {
-                if (p.startsWith("-p")) {
-                    p = p.substring(p.indexOf("=") + 1, p.length()).trim();
-                    port = Integer.parseInt(p);
+
+            if (null != args) {
+                for (String p : args) {
+                    if (p.startsWith("-p")) {
+                        p = p.substring(p.indexOf("=") + 1, p.length()).trim();
+                        port = Integer.parseInt(p);
+                    }
                 }
             }
 
             run(port);
-        } catch (IOException e) {
+        } catch (Exception e) {
             LogUtils.error(getClass(), e.getMessage(), e);
         }
+    }
+
+    public void shutdown() {
+        shutdown = true;
     }
 
     private void run(int port) throws IOException {
@@ -80,7 +89,7 @@ public class Server {
 
         LogUtils.info(getClass(), "Server started http://localhost:{}", port);
 
-        while (true) {
+        while (!shutdown) {
             //查询就绪的通道数量
             int readyChannels = selector.select();
             //没有就绪的则继续进行循环
@@ -172,7 +181,7 @@ public class Server {
     }
 
     // 这真不是servlet
-    class Request {
+    public static class Request {
 
         private String method;
 
@@ -252,6 +261,16 @@ public class Server {
 
         public void setHeaders(Map<String, String> headers) {
             this.headers = headers;
+        }
+
+        @Override
+        public String toString() {
+            return "Request{" +
+                    "method='" + method + '\'' +
+                    ", uri='" + uri + '\'' +
+                    ", parameters=" + parameters +
+                    ", headers=" + headers +
+                    '}';
         }
     }
 

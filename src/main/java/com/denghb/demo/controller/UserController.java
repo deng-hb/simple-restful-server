@@ -24,7 +24,8 @@ public class UserController {
     }
 
     @GET("/")
-    String home() {
+    String home(@RequestParameter("Token") String token) {
+        System.out.println(token);
         return "Hello World";
     }
 
