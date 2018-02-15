@@ -3,7 +3,7 @@ package com.denghb.restful;
 /**
  * 异常
  */
-public class RESTfulException extends Exception {
+public class RESTfulException extends RuntimeException {
 
     private int code;
 

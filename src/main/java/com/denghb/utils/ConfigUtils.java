@@ -1,4 +1,4 @@
-package com.denghb.restful.utils;
+package com.denghb.utils;
 
 
 import java.io.InputStream;
@@ -9,15 +9,14 @@ import java.util.Properties;
 /**
  * Created by denghb on 2016/12/16.
  */
-public class ReadConfigUtils {
+public class ConfigUtils {
 
 
-    private static String CONFIG_FILE = "slf4j2elk.properties";
+    private static String CONFIG_FILE = "restful.properties";
 
     private static Properties properties = new Properties();
 
     static {
-        // Add props from the resource slf4j2elk.properties
         InputStream in = AccessController.doPrivileged(new PrivilegedAction<InputStream>() {
             public InputStream run() {
                 ClassLoader threadCL = Thread.currentThread().getContextClassLoader();

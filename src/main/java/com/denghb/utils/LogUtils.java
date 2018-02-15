@@ -1,4 +1,4 @@
-package com.denghb.restful.utils;
+package com.denghb.utils;
 
 public class LogUtils {
 

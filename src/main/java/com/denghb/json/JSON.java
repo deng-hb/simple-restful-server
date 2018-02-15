@@ -1,6 +1,6 @@
 package com.denghb.json;
 
-import com.denghb.restful.utils.ReflectUtils;
+import com.denghb.utils.ReflectUtils;
 
 import java.lang.reflect.Field;
 import java.text.DateFormat;

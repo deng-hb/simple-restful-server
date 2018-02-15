@@ -6,7 +6,7 @@ import com.denghb.restful.RESTfulException;
 import com.denghb.restful.Server;
 import com.denghb.restful.annotation.Error;
 import com.denghb.restful.annotation.*;
-import com.denghb.restful.utils.LogUtils;
+import com.denghb.utils.LogUtils;
 
 @RESTful
 public class BaseController {

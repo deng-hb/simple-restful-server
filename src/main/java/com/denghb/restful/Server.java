@@ -1,7 +1,7 @@
 package com.denghb.restful;
 
-import com.denghb.restful.utils.JSONUtils;
-import com.denghb.restful.utils.LogUtils;
+import com.denghb.utils.JSONUtils;
+import com.denghb.utils.LogUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

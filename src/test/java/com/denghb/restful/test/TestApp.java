@@ -2,7 +2,7 @@ package com.denghb.restful.test;
 
 import com.denghb.demo.domain.User;
 import com.denghb.restful.Application;
-import com.denghb.restful.utils.JSONUtils;
+import com.denghb.utils.JSONUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

@@ -2,6 +2,7 @@ package com.denghb.demo.controller;
 
 import com.denghb.demo.domain.User;
 import com.denghb.demo.model.JSONModel;
+import com.denghb.eorm.Eorm;
 import com.denghb.restful.annotation.*;
 
 import java.util.ArrayList;
@@ -24,9 +25,21 @@ public class UserController {
     }
 
     @GET("/")
-    String home(@RequestParameter("Token") String token) {
+    String home(@RequestParameter("Token") String token, Eorm eorm) {
         System.out.println(token);
-        return "Hello World";
+        final User[] user = {null};
+        eorm.doTx(new Eorm.Handler() {
+            public void doTx(Eorm eorm) {
+
+                user[0] = new User();
+                user[0].setName("张三");
+                user[0].setMobile("1233453453");
+                eorm.insert(user[0]);
+
+                throw new RuntimeException("sss");
+            }
+        });
+        return "Hello World" + user[0].getId();
     }
 
     @GET("/user")

@@ -1,11 +1,14 @@
 package com.denghb.restful;
 
 
+import com.denghb.eorm.Eorm;
+import com.denghb.eorm.impl.EormMySQLImpl;
 import com.denghb.restful.annotation.*;
 import com.denghb.restful.annotation.Error;
-import com.denghb.restful.utils.JSONUtils;
-import com.denghb.restful.utils.LogUtils;
-import com.denghb.restful.utils.ReflectUtils;
+import com.denghb.utils.ConfigUtils;
+import com.denghb.utils.JSONUtils;
+import com.denghb.utils.LogUtils;
+import com.denghb.utils.ReflectUtils;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
@@ -152,6 +155,8 @@ public class Application {
                 ps[i] = JSONUtils.fromMap(param.getType(), request.getParameters());
             } else if (param.getType() == Server.Request.class) {
                 ps[i] = request;
+            } else if (param.getType() == Eorm.class) {
+                ps[i] = getObject(param.getType());
             } else {
                 // TODO
             }
@@ -174,8 +179,19 @@ public class Application {
      */
     private static Object getObject(Class clazz) {
 
+
         Object target = _OBJECT.get(clazz);
         if (null == target) {
+            if (clazz == Eorm.class) {
+                // 数据库实例化
+                String url = ConfigUtils.getValue("db.url");
+                String username = ConfigUtils.getValue("db.username");
+                String password = ConfigUtils.getValue("db.password");
+                Eorm eorm = new EormMySQLImpl(url, username, password);
+                _OBJECT.put(clazz, eorm);
+                return eorm;
+            }
+
             target = ReflectUtils.createInstance(clazz);
             if (null != target)
                 _OBJECT.put(clazz, target);
