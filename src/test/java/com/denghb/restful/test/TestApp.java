@@ -1,8 +1,8 @@
 package com.denghb.restful.test;
 
 import com.denghb.demo.domain.User;
+import com.denghb.json.JSON;
 import com.denghb.restful.Application;
-import com.denghb.utils.JSONUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -154,7 +154,7 @@ public class TestApp {
         user.setMobile("199999993");
         user.setName("tom");
 
-        String body = JSONUtils.toJson(user);
+        String body = JSON.toJSON(user);
         String res = HttpUtils.post(HOST + "/user", body);
 
         System.out.println(res);

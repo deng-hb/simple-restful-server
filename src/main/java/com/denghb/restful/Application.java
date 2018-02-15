@@ -3,16 +3,17 @@ package com.denghb.restful;
 
 import com.denghb.eorm.Eorm;
 import com.denghb.eorm.impl.EormMySQLImpl;
+import com.denghb.json.JSON;
 import com.denghb.restful.annotation.*;
 import com.denghb.restful.annotation.Error;
 import com.denghb.utils.ConfigUtils;
-import com.denghb.utils.JSONUtils;
-import com.denghb.utils.LogUtils;
 import com.denghb.utils.ReflectUtils;
 
+import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -42,6 +43,25 @@ public class Application {
 
     }
 
+
+    private static void outLog(Class clazz, String format, Object... arguments) {
+        String log = clazz.getName() + "\t";
+        log += format;
+
+        for (Object object : arguments) {
+            log = log.replaceFirst("\\{\\}", String.valueOf(object));
+        }
+
+        System.out.println(log);
+    }
+
+    private static void outLog(Class clazz, String msg, Throwable t) {
+
+        String log = clazz.getName() + "\t";
+        System.err.println(log + msg);
+        t.printStackTrace();
+    }
+
     public static void run(Class clazz, String[] args) {
 
         init(clazz);
@@ -49,7 +69,9 @@ public class Application {
         // 在start之前
         _SERVER.setHandler(new Server.Handler() {
             public Server.Response execute(Server.Request request) {
-                LogUtils.info(getClass(), "{}\t{}", request.getMethod(), request.getUri());
+
+                String uri = request.getUri();
+                outLog(getClass(), "{}\t{}", request.getMethod(), uri);
 
                 // 过滤
                 Object object = handlerFilter(request);
@@ -57,7 +79,7 @@ public class Application {
                     return Server.Response.build(object);
                 }
 
-                String path = request.getMethod() + request.getUri();
+                String path = request.getMethod() + uri;
                 Application.MethodInfo info = _OBJECT_METHOD.get(path);
                 Map<String, String> pathVariables = new HashMap<String, String>();
 
@@ -69,6 +91,14 @@ public class Application {
                             info = _OBJECT_METHOD.get(path1);
                             break;
                         }
+                    }
+
+                    // 文件匹配
+
+                    URL url = this.getClass().getResource("/static" + uri);
+                    File file = new File(url.getFile());
+                    if (file.exists() && !file.isDirectory()) {
+                        return Server.Response.build(file);
                     }
 
                     if (pathVariables.isEmpty()) {
@@ -97,7 +127,7 @@ public class Application {
                         return Server.Response.build(result);
                     }
                 } catch (Exception e) {
-                    LogUtils.error(getClass(), e.getMessage(), e);
+                    outLog(getClass(), e.getMessage(), e);
 
                     // 内部错误
                     Object result = handlerError(new RESTfulException(e.getMessage(), 500));
@@ -152,7 +182,7 @@ public class Application {
                 value = request.getHeaders().get(name);
             } else if (a instanceof RequestBody) {
                 // 整个是对象
-                ps[i] = JSONUtils.fromMap(param.getType(), request.getParameters());
+                ps[i] = JSON.map2Object(param.getType(), request.getParameters());
             } else if (param.getType() == Server.Request.class) {
                 ps[i] = request;
             } else if (param.getType() == Eorm.class) {
@@ -355,7 +385,7 @@ public class Application {
         if (_OBJECT_METHOD.containsKey(key)) {
             throw new IllegalArgumentException("Duplicate @" + method + "(\"" + path + "\")");
         }
-        LogUtils.debug(Application.class, "Method:{} Path:{}", method, path);
+        outLog(Application.class, "Method:{} Path:{}", method, path);
         _OBJECT_METHOD.put(key, info);
     }
 

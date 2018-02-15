@@ -6,7 +6,6 @@ import com.denghb.restful.RESTfulException;
 import com.denghb.restful.Server;
 import com.denghb.restful.annotation.Error;
 import com.denghb.restful.annotation.*;
-import com.denghb.utils.LogUtils;
 
 @RESTful
 public class BaseController {
@@ -20,14 +19,14 @@ public class BaseController {
             Request request)
 
     {
-        LogUtils.info(getClass(), "filter start");
+        System.out.println("filter start");
         System.out.println(token);
         System.out.println(request);
 
         // 改变请求参数
         request.getParameters().put("Token", "changeToken");
         System.out.println(userAgent);
-        LogUtils.info(getClass(), "filter end");
+        System.out.println("filter end");
 
     }
 
@@ -36,7 +35,7 @@ public class BaseController {
      */
     @Filter(value = "/user")
     JSONModel filter2(@RequestHeader("Token") String token) {
-        LogUtils.info(getClass(), "Test Filter");
+        System.out.println("Test Filter");
         if (null == token) {
             return JSONModel.buildFailure("请登录");
 
@@ -49,20 +48,20 @@ public class BaseController {
      */
     @Error
     void error(Exception e) {
-        LogUtils.error(getClass(), e.getMessage(), e);
+        e.printStackTrace();
     }
 
     // 异常返回 字符串
     @Error(throwable = MyException.class)
     String error2(MyException e) {
-        LogUtils.error(getClass(), e.getMessage(), e);
+        e.printStackTrace();
         return "error2";
     }
 
     @Error(throwable = RESTfulException.class)
     void error3(RESTfulException e) {
         System.err.println(e.getCode());
-        LogUtils.error(getClass(), e.getMessage(), e);
+        e.printStackTrace();
     }
 
 

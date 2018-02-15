@@ -27,19 +27,19 @@ public class UserController {
     @GET("/")
     String home(@RequestParameter("Token") String token, Eorm eorm) {
         System.out.println(token);
-        final User[] user = {null};
+        final List<User> users = new ArrayList<User>();
         eorm.doTx(new Eorm.Handler() {
             public void doTx(Eorm eorm) {
 
-                user[0] = new User();
-                user[0].setName("张三");
-                user[0].setMobile("1233453453");
-                eorm.insert(user[0]);
-
+                User user = new User();
+                user.setName("张三");
+                user.setMobile("1233453453");
+                eorm.insert(user);
+                users.add(user);
                 throw new RuntimeException("sss");
             }
         });
-        return "Hello World" + user[0].getId();
+        return "Hello World" + users.get(0).getId();
     }
 
     @GET("/user")

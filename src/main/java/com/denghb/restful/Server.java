@@ -1,10 +1,8 @@
 package com.denghb.restful;
 
-import com.denghb.utils.JSONUtils;
-import com.denghb.utils.LogUtils;
+import com.denghb.json.JSON;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.URLDecoder;
@@ -68,7 +66,7 @@ public class Server {
 
             run(port);
         } catch (Exception e) {
-            LogUtils.error(getClass(), e.getMessage(), e);
+            e.printStackTrace();
         }
     }
 
@@ -87,7 +85,7 @@ public class Server {
         //将serverSocketChannel注册给选择器,并绑定ACCEPT事件
         serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 
-        LogUtils.info(getClass(), "Server started http://localhost:{}", port);
+        System.out.println("Server started http://localhost:" + port);
 
         while (!shutdown) {
             //查询就绪的通道数量
@@ -133,7 +131,7 @@ public class Server {
                         }
 
                         socketChannel.register(selector, SelectionKey.OP_WRITE);
-                        ByteBuffer buffer = ByteBuffer.allocate(1024);
+                        ByteBuffer buffer = ByteBuffer.allocate(2048);
                         buffer.put(response.bytes());
                         //从写模式，切换到读模式
                         buffer.flip();
@@ -188,10 +186,8 @@ public class Server {
         private String uri;
 
         private Map<String, String> parameters = new HashMap<String, String>();
-        ;
 
         private Map<String, String> headers = new HashMap<String, String>();
-        ;
 
         /**
          * 解析报文，待优化
@@ -277,9 +273,11 @@ public class Server {
     static class Response {
 
         // 先默认都返回成功
-        private static final String RESPONSE_HTML = "HTTP/1.1 %s\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n%s";
+        private static final String RESPONSE_HTML = "HTTP/1.1 %s\r\nContent-Type: %s\r\nConnection: close\r\n\r\n";
 
         private int code = 200;
+
+        private String type = "application/json";
 
         private Object body;
 
@@ -301,11 +299,52 @@ public class Server {
          * @return
          */
         public byte[] bytes() {
-            String result = "";
+
+            String header = "";
+            byte[] bytes = new byte[0];
+
             if (body instanceof String) {
-                result = String.valueOf(body);
+                bytes = String.valueOf(body).getBytes();
+                type = "text/html";
+            } else if (body instanceof File) {
+
+                File file = (File) body;
+
+                String fileName = file.getAbsolutePath().toLowerCase();
+                if (fileName.endsWith("html")) {
+                    type = "text/html";
+                } else if (fileName.endsWith("jpg") || fileName.endsWith("jpeg")) {
+                    type = "image/jpeg";
+                } else if (fileName.endsWith("js")) {
+                    type = "application/x-javascript";
+                } else if (fileName.endsWith("png")) {
+                    type = "image/png";
+                } else if (fileName.endsWith("gif")) {
+                    type = "image/gif";
+                } else if (fileName.endsWith("css")) {
+                    type = "text/css";
+                }
+
+                FileInputStream fis = null;
+                try {
+                    fis = new FileInputStream(file);
+                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+
+                    byte[] b = new byte[1024];
+
+                    int n;
+
+                    while ((n = fis.read(b)) != -1) {
+                        bos.write(b, 0, n);
+                    }
+
+                    bytes = bos.toByteArray();
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             } else {
-                result = JSONUtils.toJson(body);
+                bytes = JSON.toJSON(body).getBytes();
             }
 
             // TODO
@@ -328,9 +367,9 @@ public class Server {
                     break;
             }
 
-            result = String.format(RESPONSE_HTML, status, result);
+            header = String.format(RESPONSE_HTML, status, type, body);
 
-            return result.getBytes();
+            return addBytes(header.getBytes(), bytes);
         }
 
         public static Response build(Object body) {
@@ -339,6 +378,14 @@ public class Server {
 
         public static Response buildError(int code) {
             return new Response(code);
+        }
+
+        public byte[] addBytes(byte[] data1, byte[] data2) {
+            byte[] data3 = new byte[data1.length + data2.length];
+            System.arraycopy(data1, 0, data3, 0, data1.length);
+            System.arraycopy(data2, 0, data3, data1.length, data2.length);
+            return data3;
+
         }
     }
 
@@ -349,7 +396,7 @@ public class Server {
 
         // JSON ?
         if (p.startsWith("{")) {
-            Map a = JSONUtils.fromJson(Map.class, p);
+            Map a = JSON.parseJSON(Map.class, p);
 
             param.putAll(a);
 
@@ -364,7 +411,7 @@ public class Server {
             try {
                 value = URLDecoder.decode(value, "utf-8");
             } catch (Exception e) {
-
+                e.printStackTrace();
             }
             param.put(key, value);
         }
