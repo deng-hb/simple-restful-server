@@ -42,6 +42,9 @@ public class HttpUtils {
     public static String post(String url, String body) {
         return request(url, "POST", body);
     }
+    public static String put(String url, String body) {
+        return request(url, "PUT", body);
+    }
 
     /**
      * @param url

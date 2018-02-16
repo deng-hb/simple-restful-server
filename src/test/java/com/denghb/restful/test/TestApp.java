@@ -158,6 +158,18 @@ public class TestApp {
 
         System.out.println(res);
     }
+    @Test
+    public void updateUser() {
+        User user = new User();
+        user.setMobile("199999993");
+        user.setName("tom");
+        user.setId(1L);
+
+        String body = JSON.toJSON(user);
+        String res = HttpUtils.put(HOST + "/user", body);
+
+        System.out.println(res);
+    }
 
     @Test
     public void createUser2() {

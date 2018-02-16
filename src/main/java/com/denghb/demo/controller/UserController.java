@@ -6,6 +6,7 @@ import com.denghb.eorm.Eorm;
 import com.denghb.restful.annotation.*;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,7 +37,7 @@ public class UserController {
                 user.setMobile("1233453453");
                 eorm.insert(user);
                 users.add(user);
-                throw new RuntimeException("sss");
+                throw new RuntimeException("rollback");
             }
         });
         return "Hello World" + users.get(0).getId();
@@ -65,11 +66,20 @@ public class UserController {
     }
 
     @POST("/user")
-    JSONModel create(@RequestBody User user) {
-        id = id + 1;
-        user.setId(id);
-        data.put(id, user);
+    JSONModel create(@RequestBody User user, Eorm eorm) {
+        eorm.insert(user);
+        data.put(user.getId(), user);
+        return JSONModel.buildSuccess("OK");
+    }
 
+    @PUT("/user")
+    JSONModel update(@RequestBody final User user, Eorm eorm) {
+        user.setUpdatedTime(new Date());
+        int res = eorm.update(user);
+        if (1 != res) {
+            return JSONModel.buildFailure("失败");
+
+        }
         return JSONModel.buildSuccess("OK");
     }
 

@@ -1,5 +1,7 @@
 package com.denghb.demo.domain;
 
+import java.util.Date;
+
 public class User {
 
     private Long id;
@@ -7,6 +9,10 @@ public class User {
     private String name;
 
     private String mobile;
+
+    private Date createdTime;
+
+    private Date updatedTime;
 
     public Long getId() {
         return id;
@@ -30,5 +36,21 @@ public class User {
 
     public void setMobile(String mobile) {
         this.mobile = mobile;
+    }
+
+    public Date getCreatedTime() {
+        return createdTime;
+    }
+
+    public void setCreatedTime(Date createdTime) {
+        this.createdTime = createdTime;
+    }
+
+    public Date getUpdatedTime() {
+        return updatedTime;
+    }
+
+    public void setUpdatedTime(Date updatedTime) {
+        this.updatedTime = updatedTime;
     }
 }

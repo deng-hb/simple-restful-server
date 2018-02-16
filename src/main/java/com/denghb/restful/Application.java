@@ -369,6 +369,10 @@ public class Application {
                 if (null != post) {
                     add(POST.class.getSimpleName(), post.value(), new MethodInfo(c, method));
                 }
+                PUT put = method.getAnnotation(PUT.class);
+                if (null != put) {
+                    add(PUT.class.getSimpleName(), put.value(), new MethodInfo(c, method));
+                }
 
                 DELETE delete = method.getAnnotation(DELETE.class);
                 if (null != delete) {
@@ -401,7 +405,6 @@ public class Application {
         if (_OBJECT_METHOD.containsKey(key)) {
             throw new IllegalArgumentException("Duplicate @" + method + "(\"" + path + "\")");
         }
-        outLog(Application.class, "Method:{} Path:{}", method, path);
         _OBJECT_METHOD.put(key, info);
     }
 

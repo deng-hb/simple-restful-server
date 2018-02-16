@@ -325,6 +325,7 @@ public class JSON {
      */
     private static int readMap(String origin, int index, Map map) {
         int length = origin.length();
+        dd:
         while (length >= index) {
 
             char c = origin.charAt(index++);
@@ -356,8 +357,13 @@ public class JSON {
                         map.put(key.toString(), list);
                         break;
                     }
+
+                    // 终止最外层循环
+                    if (c == '}') {
+                        break dd;
+                    }
                     // 数字 || null
-                    if (c == ',' || c == '}' || c == ']') {
+                    if (c == ',') {
                         String t = tmp.toString();
                         if ("null".equals(t)) {
                             map.put(key.toString(), null);
