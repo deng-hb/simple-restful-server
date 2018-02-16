@@ -48,26 +48,25 @@ public class TestApp {
         // /a/* -> /a/ | /a/b | /a/b/c
         // /a/*/c -> /a/b/c | /a/bbb/c
 
-        System.out.println(compre("/a/*1112/", "/a/1mmb111"));
-
+        System.out.println(comparePath("/a/*1112/", "/a/1mmb111"));
+        System.out.println(comparePath("/a/*", "/a/1mmb111"));
+        System.out.println(comparePath("/a/*", "/a/1mmb111"));
+        System.out.println(comparePath("/*", "/a/1mmb111"));
     }
 
-    private boolean compre(String origin, String uri) {
 
-        if (-1 == origin.indexOf('*')) {
-            return false;
-        }
+    private static boolean comparePath(String origin, String uri) {
 
         String[] tmp1s = origin.split("\\/");
         String[] tmp2s = uri.split("\\/");
-        if (tmp1s.length != tmp2s.length) {
-            return false;
-        }
 
         for (int i = 0; i < tmp1s.length; i++) {
             String s1 = tmp1s[i];
             String s2 = tmp2s[i];
 
+            if ("*".equals(s1)) {
+                return true;
+            }
             int start = s1.indexOf('*');
             if (-1 < start) {
 

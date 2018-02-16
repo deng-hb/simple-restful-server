@@ -43,7 +43,6 @@ public class Application {
 
     }
 
-
     private static void outLog(Class clazz, String format, Object... arguments) {
         String log = clazz.getName() + "\t";
         log += format;
@@ -70,7 +69,15 @@ public class Application {
         _SERVER.setHandler(new Server.Handler() {
             public Server.Response execute(Server.Request request) {
 
+
                 String uri = request.getUri();
+
+                // TODO 运行状态
+                if (uri.equals("/status")) {
+
+                    return Server.Response.build(_OBJECT_METHOD);
+                }
+
                 outLog(getClass(), "{}\t{}", request.getMethod(), uri);
 
                 // 过滤
@@ -94,11 +101,12 @@ public class Application {
                     }
 
                     // 文件匹配
-
                     URL url = this.getClass().getResource("/static" + uri);
-                    File file = new File(url.getFile());
-                    if (file.exists() && !file.isDirectory()) {
-                        return Server.Response.build(file);
+                    if (null != url) {
+                        File file = new File(url.getFile());
+                        if (file.exists() && !file.isDirectory()) {
+                            return Server.Response.build(file);
+                        }
                     }
 
                     if (pathVariables.isEmpty()) {
@@ -231,13 +239,8 @@ public class Application {
 
     private static Object handlerFilter(Server.Request request) {
         try {
-            String key = Filter.class.getSimpleName() + request.getUri();
+            String key = Filter.class.getSimpleName() + request.getMethod() + request.getUri();
 
-
-            // TODO
-            // /* -> /a | /ab | /c/d/e
-            // /a/* -> /a/ | /a/b | /a/b/c
-            // /a/*/c -> /a/b/c | /a/bbb/c
             Application.MethodInfo info = null;
             for (String key1 : _OBJECT_METHOD.keySet()) {
                 boolean b = comparePath(key1, key);
@@ -250,7 +253,6 @@ public class Application {
             if (null == info) {
                 return null;
             }
-
 
             Object target = getObject(info.getClazz());
             Object[] ps = buildParams(info, request, null);
@@ -266,16 +268,24 @@ public class Application {
         return null;
     }
 
+    /**
+     * /* -> /x/xx || /xxx/xx/xx..  true
+     * /*a/aa -> /xxxa/aa  true
+     */
     private static boolean comparePath(String origin, String uri) {
 
         String[] tmp1s = origin.split("\\/");
         String[] tmp2s = uri.split("\\/");
-        if (tmp1s.length != tmp2s.length) {
-            return false;
-        }
 
-        for (int i = 0; i < tmp1s.length; i++) {
+        int len1 = tmp1s.length;
+        int len2 = tmp2s.length;
+
+        for (int i = 0; i < len1; i++) {
             String s1 = tmp1s[i];
+
+            if ("*".equals(s1)) {
+                return true;
+            }
             String s2 = tmp2s[i];
 
             int start = s1.indexOf('*');
@@ -372,7 +382,13 @@ public class Application {
 
                 Filter filter = method.getAnnotation(Filter.class);
                 if (null != filter) {
-                    add(Filter.class.getSimpleName(), filter.value(), new MethodInfo(c, method));
+
+                    Class[] ms = filter.method();
+                    for (Class cl : ms) {
+                        // GET/*  POST/*
+                        String path = cl.getSimpleName() + filter.value();
+                        add(Filter.class.getSimpleName(), path, new MethodInfo(c, method));
+                    }
                 }
             }
         }

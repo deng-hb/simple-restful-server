@@ -131,7 +131,7 @@ public class Server {
                         }
 
                         socketChannel.register(selector, SelectionKey.OP_WRITE);
-                        ByteBuffer buffer = ByteBuffer.allocate(2048);
+                        ByteBuffer buffer = ByteBuffer.allocate(1024 * 10 * 10);
                         buffer.put(response.bytes());
                         //从写模式，切换到读模式
                         buffer.flip();

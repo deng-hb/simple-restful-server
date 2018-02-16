@@ -11,7 +11,7 @@ import java.lang.annotation.*;
 @Target(value = {ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Filter {
-    String value() default "/";
+    String value() default "/*";
 
     Class[] method() default {GET.class, POST.class, DELETE.class};
 }
