@@ -12,6 +12,10 @@ public class RESTfulException extends RuntimeException {
         this.code = code;
     }
 
+    public RESTfulException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
     public int getCode() {
         return code;
     }

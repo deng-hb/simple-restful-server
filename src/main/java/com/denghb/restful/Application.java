@@ -353,9 +353,11 @@ public class Application {
 
         Set<Class> set = ReflectUtils.getSubClasses(clazz);
         for (Class c : set) {
-            if (null == c.getAnnotation(RESTful.class)) {
+            RESTful rest = (RESTful) c.getAnnotation(RESTful.class);
+            if (null == rest) {
                 continue;
             }
+            String url = rest.value();
             // 获取方法
             List<Method> methods = ReflectUtils.getAllMethods(c);
 
@@ -363,20 +365,20 @@ public class Application {
 
                 GET get = method.getAnnotation(GET.class);
                 if (null != get) {
-                    add(GET.class.getSimpleName(), get.value(), new MethodInfo(c, method));
+                    add(GET.class.getSimpleName(), url + get.value(), new MethodInfo(c, method));
                 }
                 POST post = method.getAnnotation(POST.class);
                 if (null != post) {
-                    add(POST.class.getSimpleName(), post.value(), new MethodInfo(c, method));
+                    add(POST.class.getSimpleName(), url + post.value(), new MethodInfo(c, method));
                 }
                 PUT put = method.getAnnotation(PUT.class);
                 if (null != put) {
-                    add(PUT.class.getSimpleName(), put.value(), new MethodInfo(c, method));
+                    add(PUT.class.getSimpleName(), url + put.value(), new MethodInfo(c, method));
                 }
 
                 DELETE delete = method.getAnnotation(DELETE.class);
                 if (null != delete) {
-                    add(DELETE.class.getSimpleName(), delete.value(), new MethodInfo(c, method));
+                    add(DELETE.class.getSimpleName(), url + delete.value(), new MethodInfo(c, method));
                 }
 
                 Error error = method.getAnnotation(Error.class);
