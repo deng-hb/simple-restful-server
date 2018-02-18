@@ -17,9 +17,9 @@ public class App {
         Application.run(App.class, args);
     }
 
-    @GET("/xx")
-    String xx() {
-        return "XX";
+    @GET("/")
+    String home() {
+        return "Hello World!";
     }
 
     @GET("/xx/{aa}/b{bb}aa")
