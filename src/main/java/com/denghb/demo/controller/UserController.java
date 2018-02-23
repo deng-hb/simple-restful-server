@@ -40,7 +40,7 @@ public class UserController {
                 throw new RuntimeException("rollback");
             }
         });
-        return "Hello World" + users.get(0).getId();
+        return "Hello World";
     }
 
     @GET("/user")

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Book</title>
+    <script src="/js/ajax.js"></script>
+</head>
+<body>
+<h2>Books</h2>
+
+
+
+<fieldset>
+    <input id="name" />
+    <input id="price" />
+    <input type="button" value="create" onclick="create()">
+</fieldset>
+
+<script>
+
+    var el = function(id) {
+        return document.getElementById(id);
+    }
+    var create = function(){
+        var name = el('name').value;
+        var price = el('price').value;
+
+        ajax({url:"/book",
+              method:"POST",
+              data:{name:name,price:price},
+              success:function(res){
+                console.log(res);
+              }
+        });
+
+    }
+
+    ajax({url:"/book",success:function(res){
+        console.log(res);
+    }});
+</script>
+</body>
+</html>
