@@ -17,11 +17,6 @@ public class App {
         Application.run(App.class, args);
     }
 
-    @GET("/")
-    String home() {
-        return "Hello World!";
-    }
-
     @GET("/xx/{aa}/b{bb}aa")
     String xx2(@PathVariable("aa") String aa, @PathVariable("bb") String bb) {
         return "XX:" + aa + ":" + bb;
