@@ -14,8 +14,8 @@ public class BaseController {
     /**
      * URL访问过滤
      */
-    @Filter
-    void filter(@RequestHeader("User-Agent") String userAgent, @RequestParameter("Token") String token, Server.
+    @Before
+    void before(@RequestHeader("User-Agent") String userAgent, @RequestParameter("Token") String token, Server.
             Request request)
 
     {
@@ -33,8 +33,8 @@ public class BaseController {
     /**
      * URL访问过滤
      */
-    @Filter(value = "/user")
-    JSONModel filter2(@RequestHeader("Token") String token) {
+    @Before(value = "/user")
+    JSONModel before(@RequestHeader("Token") String token) {
         System.out.println("Test Filter");
         if (null == token) {
             return JSONModel.buildFailure("请登录");

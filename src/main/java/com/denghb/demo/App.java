@@ -21,7 +21,6 @@ public class App {
     String xx2(@PathVariable("aa") String aa, @PathVariable("bb") String bb) {
         return "XX:" + aa + ":" + bb;
     }
-
     @GET("/test/header")
     String header(@RequestHeader("Host") String host, @RequestHeader("User-Agent") String userAgent) {
 
