@@ -1,18 +1,45 @@
 package com.denghb.restful.test;
 
 import com.denghb.json.JSON;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.MultiFormatWriter;
+import com.google.zxing.common.BitMatrix;
+import org.apache.commons.codec.binary.Base64;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.util.*;
 
 public class JSONTest {
 
-    @Test
-    public void test1() {
+    private static final int BLACK = 0xFF000000;
+    private static final int WHITE = 0xFFFFFFFF;
 
+    private static String generateQRCode(String text, int width, int height) throws Exception {
+        Hashtable<EncodeHintType, Object> hints = new Hashtable<EncodeHintType, Object>();
+        hints.put(EncodeHintType.CHARACTER_SET, "utf-8");
+        BitMatrix matrix = new MultiFormatWriter().encode(text, BarcodeFormat.QR_CODE, width, height, hints);
+
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                image.setRGB(x, y, matrix.get(x, y) ? BLACK : WHITE);
+            }
+        }
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(image, "jpg", baos);
+        byte[] bytes = baos.toByteArray();
+        return Base64.encodeBase64String(bytes);
+    }
+
+    @Test
+    public void test1() throws Exception {
+        String base64 = generateQRCode("hello world", 100, 100);
+        System.out.println(base64);
     }
 
     public static class Book {

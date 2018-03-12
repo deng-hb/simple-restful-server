@@ -2,10 +2,9 @@ package com.denghb.demo.controller;
 
 import com.denghb.demo.MyException;
 import com.denghb.demo.model.JSONModel;
-import com.denghb.restful.RESTfulException;
-import com.denghb.restful.Server;
-import com.denghb.restful.annotation.Error;
-import com.denghb.restful.annotation.*;
+import com.denghb.forest.ForestException;
+import com.denghb.forest.annotation.*;
+import com.denghb.forest.server.Request;
 
 @RESTful
 public class BaseController {
@@ -14,8 +13,8 @@ public class BaseController {
     /**
      * URL访问过滤
      */
-    @Before
-    void before(@RequestHeader("User-Agent") String userAgent, @RequestParameter("Token") String token, Server.
+    @Filter
+    void before(@RequestHeader("User-Agent") String userAgent, @RequestParameter("Token") String token,
             Request request)
 
     {
@@ -33,7 +32,7 @@ public class BaseController {
     /**
      * URL访问过滤
      */
-    @Before(value = "/user")
+    @Filter(value = "/user")
     JSONModel before(@RequestHeader("Token") String token) {
         System.out.println("Test Filter");
         if (null == token) {
@@ -46,20 +45,20 @@ public class BaseController {
     /**
      * 处理异常
      */
-    @Error
+    @ExceptionHandler
     void error(Exception e) {
         e.printStackTrace();
     }
 
     // 异常返回 字符串
-    @Error(throwable = MyException.class)
+    @ExceptionHandler(throwable = MyException.class)
     String error2(MyException e) {
         e.printStackTrace();
         return "error2";
     }
 
-    @Error(throwable = RESTfulException.class)
-    void error3(RESTfulException e) {
+    @ExceptionHandler(throwable = ForestException.class)
+    void error3(ForestException e) {
         System.err.println(e.getCode());
         e.printStackTrace();
     }

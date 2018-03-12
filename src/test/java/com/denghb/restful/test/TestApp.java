@@ -1,8 +1,8 @@
 package com.denghb.restful.test;
 
 import com.denghb.demo.domain.User;
+import com.denghb.forest.Application;
 import com.denghb.json.JSON;
-import com.denghb.restful.Application;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

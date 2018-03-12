@@ -2,7 +2,7 @@ package com.denghb.demo.controller;
 
 import com.denghb.demo.domain.Book;
 import com.denghb.eorm.Eorm;
-import com.denghb.restful.annotation.*;
+import com.denghb.forest.annotation.*;
 
 import java.util.Date;
 import java.util.List;
